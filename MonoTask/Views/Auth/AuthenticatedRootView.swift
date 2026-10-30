@@ -33,6 +33,12 @@ struct AuthenticatedRootView: View {
     }
 
     private func openStoreForCurrentUser() async {
+        if let userID = auth.userID, let existing = auth.activeContainer {
+            container = existing
+            containerUserID = userID
+            storeError = nil
+            return
+        }
         container = nil
         containerUserID = nil
         auth.activeContainer = nil

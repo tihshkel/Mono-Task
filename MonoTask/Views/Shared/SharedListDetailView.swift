@@ -5,6 +5,7 @@ struct SharedListDetailView: View {
     @State private var store = SharedListStore.shared
     @State private var editingTask: SharedTask?
     @State private var managing = false
+    @State private var inviting = false
     private var list: SharedList? { store.lists.first { $0.id == listID } }
 
     var body: some View {
@@ -13,8 +14,7 @@ struct SharedListDetailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         let tasks = store.tasks(in: listID)
-                        Text("\(tasks.filter(\.isDone).count) / \(tasks.count) выполнено")
-                            .font(Theme.Typography.callout).foregroundStyle(Theme.Colors.textSecondary)
+                        folderHeader(list, tasks: tasks)
                         if let message = store.errorMessage {
                             Text(message).font(Theme.Typography.callout).foregroundStyle(Theme.Colors.textSecondary)
                         }
@@ -24,9 +24,13 @@ struct SharedListDetailView: View {
                         }
                         ForEach(store.conflicts(in: listID), id: \.task.id) { edit in conflictCard(edit) }
                         if tasks.isEmpty {
-                            ContentUnavailableView(
-                                "В списке нет задач", systemImage: "checklist",
-                                description: Text("Добавьте первую задачу — её увидят все участники."))
+                            VStack(spacing: 12) {
+                                Image(systemName: "checklist").font(.system(size: 30, weight: .light))
+                                    .foregroundStyle(Theme.Colors.accent)
+                                Text("Начните с одной задачи").font(.system(size: 18, weight: .medium))
+                                Text("Её увидят все участники папки.").font(Theme.Typography.callout)
+                                    .foregroundStyle(Theme.Colors.textSecondary)
+                            }.frame(maxWidth: .infinity).padding(.vertical, 28)
                         }
                         ForEach(tasks) { task in taskRow(task) }
                         Button {
@@ -34,7 +38,7 @@ struct SharedListDetailView: View {
                         } label: {
                             Label("Новая задача", systemImage: "plus").frame(maxWidth: .infinity, minHeight: 52)
                         }
-                        .buttonStyle(.plain).modifier(FloatingGlass(shape: Capsule()))
+                        .buttonStyle(SharedPrimaryStyle())
                         .accessibilityIdentifier("shared-add-task")
                     }.padding(20).frame(maxWidth: 760).frame(maxWidth: .infinity)
                 }
@@ -52,6 +56,7 @@ struct SharedListDetailView: View {
                     }
                 }
                 .sheet(isPresented: $managing) { SharedMembersView(listID: listID) }
+                .sheet(isPresented: $inviting) { SharedInviteSheet(listID: listID) }
                 .sheet(item: $editingTask) { task in SharedTaskEditor(task: task) }
             } else {
                 ContentUnavailableView(
@@ -63,6 +68,57 @@ struct SharedListDetailView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+    }
+
+    private func folderHeader(_ list: SharedList, tasks: [SharedTask]) -> some View {
+        let done = tasks.filter(\.isDone).count
+        return VStack(alignment: .leading, spacing: 20) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 9) {
+                    Text("ОБЩАЯ ПАПКА").font(.system(size: 9, weight: .semibold)).tracking(1.4)
+                        .foregroundStyle(Theme.Colors.accent)
+                    Text(list.title).font(.system(size: 27, weight: .semibold)).tracking(-0.8)
+                    Text("Планы складываются, когда вы вместе.")
+                        .font(.system(size: 12)).foregroundStyle(Theme.Colors.textSecondary)
+                }
+                Spacer(minLength: 0)
+                FolderArtwork(tint: Theme.Colors.blueViolet, icon: "person.2.fill")
+                    .frame(width: 100, height: 90)
+            }
+            HStack(spacing: 12) {
+                Button {
+                    managing = true
+                } label: {
+                    HStack(spacing: 9) {
+                        SharedMemberAvatars(members: store.members(in: listID), size: 30)
+                        Text("Участников: \(store.members(in: listID).count)").font(.system(size: 11))
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                    }
+                }.buttonStyle(.plain).accessibilityIdentifier("shared-folder-members")
+                Spacer()
+                if list.ownerID == store.accountID {
+                    Button {
+                        inviting = true
+                    } label: {
+                        Image(systemName: "qrcode").font(.system(size: 17)).foregroundStyle(Theme.Colors.accent)
+                            .frame(width: 42, height: 42)
+                            .background(Theme.Colors.accent.opacity(0.09), in: RoundedRectangle(cornerRadius: 13))
+                    }.buttonStyle(.plain).accessibilityLabel("Пригласить по QR-коду")
+                        .accessibilityIdentifier("shared-quick-invite")
+                }
+            }
+            Hairline()
+            HStack {
+                Text("\(done) / \(tasks.count) выполнено").font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                Spacer()
+                Text(tasks.isEmpty ? "Начало истории" : done == tasks.count ? "Всё готово" : "Двигаемся вместе")
+                    .font(.system(size: 10)).foregroundStyle(Theme.Colors.textMuted)
+            }
+            ProgressLine(progress: tasks.isEmpty ? 0 : Double(done) / Double(tasks.count), height: 3)
+        }
+        .padding(20).background(Theme.Colors.surface, in: RoundedRectangle(cornerRadius: 26))
+        .overlay(RoundedRectangle(cornerRadius: 26).strokeBorder(Theme.Colors.borderSubtle, lineWidth: 0.6))
     }
 
     private func taskRow(_ task: SharedTask) -> some View {
@@ -158,59 +214,93 @@ struct SharedTaskEditor: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Задача") {
-                    TextField("Что нужно сделать?", text: $draft.title, axis: .vertical).accessibilityIdentifier(
-                        "shared-task-title")
-                    TextField("Заметки", text: $draft.notes, axis: .vertical).lineLimit(3...10).accessibilityIdentifier(
-                        "shared-task-notes")
-                    Toggle("Выполнено", isOn: $draft.isDone)
-                    Toggle("Высокий приоритет", isOn: $draft.isHighPriority)
-                }
-                Section("Ответственный") {
-                    Picker("Участник", selection: $draft.assigneeID) {
-                        Text("Без ответственного").tag(UUID?.none)
-                        ForEach(store.members(in: draft.listID)) { member in
-                            Text(member.userID == store.accountID ? "Вы" : member.displayName).tag(
-                                Optional(member.userID))
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    GroupCard(padding: 18) {
+                        VStack(alignment: .leading, spacing: 16) {
+                            EyebrowLabel(text: "Общая задача")
+                            TextField("Что нужно сделать?", text: $draft.title, axis: .vertical)
+                                .font(.system(size: 24, weight: .semibold)).textFieldStyle(.plain)
+                                .accessibilityIdentifier("shared-task-title")
+                            TextField("Заметки", text: $draft.notes, axis: .vertical).lineLimit(3...10)
+                                .font(.system(size: 14)).textFieldStyle(.plain)
+                                .padding(13).frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Theme.Colors.fill.opacity(0.6), in: RoundedRectangle(cornerRadius: 13))
+                                .accessibilityIdentifier("shared-task-notes")
                         }
                     }
-                }
-                Section("Подзадачи") {
-                    ForEach($draft.subtasks) { $subtask in
-                        HStack {
-                            Toggle("Выполнить подзадачу", isOn: $subtask.isDone).labelsHidden().frame(width: 44)
-                            TextField("Подзадача", text: $subtask.title)
-                            Button {
-                                draft.subtasks.removeAll { $0.id == subtask.id }
-                            } label: {
-                                Image(systemName: "minus.circle").frame(minWidth: 44, minHeight: 44)
+                    GroupCard(padding: 18) {
+                        VStack(spacing: 16) {
+                            Toggle("Выполнено", isOn: $draft.isDone)
+                            Hairline()
+                            Toggle(isOn: $draft.isHighPriority) {
+                                Label("Высокий приоритет", systemImage: "flame")
                             }
-                            .buttonStyle(.plain).accessibilityLabel("Удалить подзадачу")
+                        }.font(.system(size: 14))
+                    }
+                    VStack(alignment: .leading, spacing: 12) {
+                        SharedSectionTitle(title: "Ответственный")
+                        GroupCard(padding: 18) {
+                            Picker("Участник", selection: $draft.assigneeID) {
+                                Text("Без ответственного").tag(UUID?.none)
+                                ForEach(store.members(in: draft.listID)) { member in
+                                    Text(member.userID == store.accountID ? "Вы" : member.displayName)
+                                        .tag(Optional(member.userID))
+                                }
+                            }.font(.system(size: 14))
                         }
                     }
-                    if draft.subtasks.count < 100 {
-                        HStack {
-                            TextField("Новая подзадача", text: $subtaskTitle).accessibilityIdentifier(
-                                "shared-subtask-input")
-                            Button("Добавить") {
-                                draft.subtasks.append(
-                                    SharedSubtask(title: subtaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)))
-                                subtaskTitle = ""
-                            }.disabled(
-                                subtaskTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                    || subtaskTitle.count > 500)
+                    VStack(alignment: .leading, spacing: 12) {
+                        SharedSectionTitle(
+                            title: "Подзадачи",
+                            detail: "\(draft.subtasks.filter(\.isDone).count)/\(draft.subtasks.count)")
+                        GroupCard(padding: 16) {
+                            VStack(spacing: 12) {
+                                ForEach($draft.subtasks) { $subtask in
+                                    HStack(spacing: 10) {
+                                        Toggle("Выполнить подзадачу", isOn: $subtask.isDone).labelsHidden().frame(
+                                            width: 44)
+                                        TextField("Подзадача", text: $subtask.title).textFieldStyle(.plain)
+                                            .font(.system(size: 14))
+                                        Button {
+                                            draft.subtasks.removeAll { $0.id == subtask.id }
+                                        } label: {
+                                            Image(systemName: "minus.circle").frame(minWidth: 36, minHeight: 44)
+                                                .foregroundStyle(Theme.Colors.textSecondary)
+                                        }.buttonStyle(.plain).accessibilityLabel("Удалить подзадачу")
+                                    }
+                                    Hairline()
+                                }
+                                if draft.subtasks.count < 100 {
+                                    HStack(spacing: 10) {
+                                        TextField("Новая подзадача", text: $subtaskTitle).textFieldStyle(.plain)
+                                            .font(.system(size: 14)).accessibilityIdentifier("shared-subtask-input")
+                                        Button("Добавить") {
+                                            draft.subtasks.append(
+                                                SharedSubtask(
+                                                    title: subtaskTitle.trimmingCharacters(in: .whitespacesAndNewlines))
+                                            )
+                                            subtaskTitle = ""
+                                        }.font(.system(size: 12, weight: .semibold)).buttonStyle(.plain)
+                                            .foregroundStyle(Theme.Colors.accent)
+                                            .disabled(
+                                                subtaskTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                                    || subtaskTitle.count > 500)
+                                    }.frame(minHeight: 44)
+                                }
+                            }
                         }
                     }
-                }
-                if store.cache.snapshot.tasks.contains(where: { $0.id == draft.id }) {
-                    Section { Button("Удалить общую задачу", role: .destructive) { deleting = true } }
-                }
-                Section {
-                    Text("Заметки, подзадачи и статус видны всем участникам этого списка.").foregroundStyle(
-                        Theme.Colors.textSecondary)
-                }
+                    if store.cache.snapshot.tasks.contains(where: { $0.id == draft.id }) {
+                        Button("Удалить общую задачу", role: .destructive) { deleting = true }
+                            .font(.system(size: 13, weight: .medium)).buttonStyle(.plain)
+                            .foregroundStyle(Theme.Colors.danger).frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    Label("Заметки, подзадачи и статус видны всем участникам папки.", systemImage: "person.2")
+                        .font(.system(size: 11)).foregroundStyle(Theme.Colors.textSecondary)
+                }.padding(24).frame(maxWidth: 620).frame(maxWidth: .infinity)
             }
+            .scrollDismissesKeyboard(.interactively).background(Theme.Colors.background)
             .navigationTitle(draft.revision == 0 ? "Новая задача" : "Общая задача")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Отмена") { dismiss() } }

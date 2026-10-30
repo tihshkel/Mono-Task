@@ -10,7 +10,13 @@ final class AuthManager {
 
     private(set) var userID: UUID?
     private(set) var email: String?
-    var activeContainer: ModelContainer?
+    var activeContainer: ModelContainer? {
+        didSet {
+            #if os(macOS)
+            IslandController.shared.attach(container: activeContainer, accountID: userID)
+            #endif
+        }
+    }
     var isRestoring = true
     var isBusy = false
     var errorMessage: String?
@@ -60,7 +66,7 @@ final class AuthManager {
             let session = try await client.auth.signIn(email: email, password: password)
             setSession(session)
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userMessage(for: error)
         }
     }
 
@@ -82,7 +88,7 @@ final class AuthManager {
                 infoMessage = "Проверьте почту и подтвердите адрес, затем войдите."
             }
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userMessage(for: error)
         }
     }
 
@@ -95,7 +101,7 @@ final class AuthManager {
             try await client.auth.signOut(scope: .local)
             clearSession()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userMessage(for: error)
         }
     }
 
@@ -107,12 +113,30 @@ final class AuthManager {
             let session = try await client.auth.session(from: url)
             setSession(session)
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userMessage(for: error)
         }
     }
 
+    private func userMessage(for error: Error) -> String {
+        let description = error.localizedDescription
+        let text = description.lowercased()
+        if text.contains("invalid login credentials") { return "Проверьте email и пароль. Не удалось войти в аккаунт." }
+        if text.contains("email not confirmed") { return "Подтвердите адрес по ссылке в письме, затем войдите." }
+        if text.contains("already registered") { return "Этот адрес уже зарегистрирован. Переключитесь на вход." }
+        if text.contains("rate limit") || text.contains("too many") {
+            return "Слишком много попыток. Попробуйте немного позже."
+        }
+        if !NetworkMonitor.shared.isConnected || text.contains("offline") || text.contains("network connection") {
+            return "Не получилось подключиться. Проверьте интернет и попробуйте ещё раз."
+        }
+        return description
+    }
+
     private func setSession(_ session: Session) {
-        if userID != session.user.id { TaskDeletionManager.shared.commitPending() }
+        if userID != session.user.id {
+            TaskDeletionManager.shared.commitPending()
+            activeContainer = nil
+        }
         userID = session.user.id
         email = session.user.email
         errorMessage = nil

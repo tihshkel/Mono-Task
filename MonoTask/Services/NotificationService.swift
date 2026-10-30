@@ -21,6 +21,25 @@ struct ReminderTask: Sendable {
     let priority: Bool
     let tagIDs: [UUID]
     let order: Int
+    var minutesBefore: Int? = 0
+
+    var fireDate: Date? {
+        guard let date, let minutesBefore, (0...525_600).contains(minutesBefore) else { return nil }
+        return date.addingTimeInterval(-Double(minutesBefore) * 60)
+    }
+}
+
+enum ReminderLeadTime {
+    static let presets = [0, 5, 15, 30, 60, 120, 1_440, 2_880, 10_080]
+    static func duration(_ minutes: Int) -> String {
+        if minutes % 1_440 == 0 { return "\(minutes / 1_440) дн." }
+        if minutes % 60 == 0 { return "\(minutes / 60) ч." }
+        return "\(minutes) мин."
+    }
+    static func label(_ minutes: Int?) -> String {
+        guard let minutes else { return "Без уведомления" }
+        return minutes == 0 ? "В момент срока" : "За " + duration(minutes)
+    }
 }
 
 struct ReminderTag: Sendable {
@@ -48,11 +67,15 @@ enum NotificationPlanner {
         let open = tasks.filter { !$0.done }
         if p.taskReminders {
             for task in open {
-                guard let date = task.date, date > now else { continue }
+                guard let date = task.fireDate, date > now else { continue }
+                let early = (task.minutesBefore ?? 0) > 0
+                let detail =
+                    early ? "До срока: \(ReminderLeadTime.duration(task.minutesBefore!))." : "Крайний срок наступил."
                 result.append(
                     PlannedNotification(
                         identifier: "monotask.task.\(task.id.uuidString)",
-                        title: "Напоминание", body: p.showPreview ? task.title : "Пора вернуться к задаче в MonoTask.",
+                        title: early ? "Срок задачи приближается" : "Крайний срок задачи",
+                        body: p.showPreview ? "\(task.title)\n\(detail)" : "Пора вернуться к задаче в MonoTask.",
                         date: date, taskID: task.id))
             }
         }
@@ -193,7 +216,8 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         let snapshots = tasks.filter { !TaskDeletionManager.shared.isPending($0) }.map {
             ReminderTask(
                 id: $0.id, title: $0.title, date: $0.dueDate,
-                done: $0.isDone, priority: $0.isHighPriorityToday, tagIDs: $0.tags.map(\.id), order: $0.sortOrder)
+                done: $0.isDone, priority: $0.isHighPriorityToday, tagIDs: $0.tags.map(\.id), order: $0.sortOrder,
+                minutesBefore: $0.reminderMinutesBefore)
         }
         let tagSnapshots = tags.map {
             ReminderTag(id: $0.id, name: $0.name, weekdays: $0.scheduledDays.map(\.rawValue))

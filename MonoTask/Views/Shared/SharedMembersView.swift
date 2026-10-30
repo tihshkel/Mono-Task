@@ -4,7 +4,7 @@ struct SharedMembersView: View {
     let listID: UUID
     @Environment(\.dismiss) private var dismiss
     @State private var store = SharedListStore.shared
-    @State private var invite: SharedInvite?
+    @State private var inviting = false
     @State private var error: String?
     @State private var removing: SharedMember?
     @State private var deleting = false
@@ -15,122 +15,163 @@ struct SharedMembersView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            ScrollView {
                 if let list {
-                    Section("Список") {
-                        Text(list.title)
-                        if isOwner {
-                            Button("Переименовать") {
-                                title = list.title; renaming = true
-                            }.disabled(!store.canManage)
+                    VStack(alignment: .leading, spacing: 26) {
+                        HStack(spacing: 18) {
+                            FolderArtwork(tint: Theme.Colors.blueViolet, icon: "person.2.fill")
+                                .frame(width: 100, height: 85)
+                            VStack(alignment: .leading, spacing: 7) {
+                                Text(list.title).font(.system(size: 25, weight: .semibold)).tracking(-0.6)
+                                Label(isOwner ? "Ваша общая папка" : "Общая папка", systemImage: "person.2")
+                                    .font(.system(size: 12)).foregroundStyle(Theme.Colors.textSecondary)
+                            }
+                            Spacer(minLength: 0)
                         }
-                    }
-                    Section("Участники") {
-                        ForEach(store.members(in: listID)) { member in
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(
-                                        member.userID == store.accountID
-                                            ? "\(member.displayName) (вы)" : member.displayName)
-                                    Text(member.userID == list.ownerID ? "Владелец" : "Участник")
-                                        .font(Theme.Typography.caption).foregroundStyle(Theme.Colors.textSecondary)
-                                }
-                                Spacer()
-                                if isOwner && member.userID != list.ownerID {
-                                    Button("Удалить", role: .destructive) { removing = member }.disabled(
-                                        !store.canManage)
+                        if isOwner {
+                            Button {
+                                inviting = true
+                            } label: {
+                                Label("Пригласить по QR-коду", systemImage: "qrcode")
+                            }.buttonStyle(SharedPrimaryStyle()).accessibilityIdentifier("shared-open-invite")
+                        }
+                        VStack(alignment: .leading, spacing: 13) {
+                            SharedSectionTitle(title: "Участники", detail: "\(store.members(in: listID).count)")
+                            GroupCard {
+                                ForEach(store.members(in: listID)) { member in
+                                    HStack(spacing: 12) {
+                                        SharedMemberAvatar(member: member, size: 42)
+                                        VStack(alignment: .leading, spacing: 5) {
+                                            Text(
+                                                member.userID == store.accountID
+                                                    ? "\(member.displayName) (вы)" : member.displayName
+                                            )
+                                            .font(.system(size: 14, weight: .medium))
+                                            Text(member.userID == list.ownerID ? "Владелец папки" : "Участник")
+                                                .font(.system(size: 11)).foregroundStyle(Theme.Colors.textSecondary)
+                                        }
+                                        Spacer(minLength: 0)
+                                        if isOwner && member.userID != list.ownerID {
+                                            Button("Удалить", role: .destructive) { removing = member }
+                                                .font(.system(size: 11, weight: .medium)).buttonStyle(.plain)
+                                                .foregroundStyle(Theme.Colors.danger).disabled(!store.canManage)
+                                        }
+                                    }.padding(16)
+                                        .accessibilityElement(children: .contain)
+                                        .accessibilityIdentifier("shared-member-\(member.id)")
+                                    if member.id != store.members(in: listID).last?.id { Hairline(leading: 70) }
                                 }
                             }
                         }
-                    }
-                    if isOwner {
-                        Section("Приглашение") {
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: "person.2.badge.key").foregroundStyle(Theme.Colors.accent)
                             Text(
-                                "Приглашение одноразовое и действует 72 часа. Новое приглашение отменит предыдущее неиспользованное."
+                                "Участники видят общие задачи и могут редактировать их. Приглашениями и доступом управляет владелец."
                             )
-                            .font(Theme.Typography.callout).foregroundStyle(Theme.Colors.textSecondary)
-                            Button("Создать приглашение") {
-                                Task {
-                                    do { invite = try await store.createInvite(listID: listID) } catch {
-                                        self.error = SharedListStore.message(for: error)
+                            .font(.system(size: 12)).foregroundStyle(Theme.Colors.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        }
+                        VStack(alignment: .leading, spacing: 13) {
+                            SharedSectionTitle(title: "Управление папкой")
+                            GroupCard {
+                                if isOwner {
+                                    managementRow("Переименовать", icon: "pencil") {
+                                        title = list.title; renaming = true
+                                    }
+                                    Hairline(leading: 52)
+                                    managementRow("Удалить общую папку", icon: "trash", destructive: true) {
+                                        deleting = true
+                                    }
+                                } else if let own = store.members(in: listID).first(where: {
+                                    $0.userID == store.accountID
+                                }) {
+                                    managementRow(
+                                        "Покинуть папку", icon: "rectangle.portrait.and.arrow.right", destructive: true
+                                    ) {
+                                        removing = own
                                     }
                                 }
-                            }.disabled(!store.canManage).accessibilityIdentifier("shared-create-invite")
-                            if let invite {
-                                Text(invite.code).font(.system(.body, design: .monospaced)).textSelection(.enabled)
-                                    .accessibilityIdentifier("shared-generated-code")
-                                Text("До \(invite.expiresAt.formatted(date: .abbreviated, time: .shortened))").font(
-                                    Theme.Typography.caption)
-                                ShareLink(item: invite.url, subject: Text("Приглашение в MonoTask")) {
-                                    Label("Поделиться приглашением", systemImage: "square.and.arrow.up")
-                                }
                             }
                         }
-                        Section {
-                            Button("Удалить общий список", role: .destructive) { deleting = true }.disabled(
-                                !store.canManage)
-                        }
-                    } else if let own = store.members(in: listID).first(where: { $0.userID == store.accountID }) {
-                        Section {
-                            Button("Покинуть список", role: .destructive) { removing = own }.disabled(!store.canManage)
-                        }
                     }
+                    .padding(24).frame(maxWidth: 620).frame(maxWidth: .infinity)
                 } else {
-                    ContentUnavailableView("Список недоступен", systemImage: "person.2.slash")
+                    ContentUnavailableView("Папка недоступна", systemImage: "person.2.slash").padding(30)
                 }
             }
+            .background(Theme.Colors.background).scrollIndicators(.hidden)
             .navigationTitle("Участники и доступ")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Готово") { dismiss() } } }
-            .alert("Переименовать список", isPresented: $renaming) {
-                TextField("Название", text: $title)
-                Button("Сохранить") {
-                    guard let list else { return }
-                    Task {
-                        do { try await store.updateList(list, title: title) } catch {
-                            self.error = SharedListStore.message(for: error)
-                        }
-                    }
-                }
-                Button("Отмена", role: .cancel) {}
-            }
-            .confirmationDialog(
-                "Закрыть доступ к списку?",
-                isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
-                titleVisibility: .visible
-            ) {
-                Button("Подтвердить", role: .destructive) {
-                    guard let member = removing else { return }
-                    Task {
-                        do {
-                            try await store.removeMember(member); if member.userID == store.accountID { dismiss() }
-                        } catch { self.error = SharedListStore.message(for: error) }
-                        removing = nil
-                    }
-                }
-                Button("Отмена", role: .cancel) { removing = nil }
-            } message: {
-                Text(
-                    "Участник больше не сможет просматривать и изменять общие задачи. Его личные задачи останутся на месте."
-                )
-            }
-            .confirmationDialog(
-                "Удалить список для всех участников?", isPresented: $deleting, titleVisibility: .visible
-            ) {
-                Button("Удалить", role: .destructive) {
-                    guard let list else { return }
-                    Task {
-                        do { try await store.updateList(list, title: list.title, delete: true); dismiss() } catch {
-                            self.error = SharedListStore.message(for: error)
-                        }
-                    }
-                }
-                Button("Отмена", role: .cancel) {}
-            }
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
         }
+        .foregroundStyle(Theme.Colors.textPrimary).tint(Theme.Colors.accent).preferredColorScheme(Theme.colorScheme)
+        .sheet(isPresented: $inviting) { SharedInviteSheet(listID: listID) }
         .sharedErrorAlert($error)
-        .tint(Theme.Colors.accent).preferredColorScheme(Theme.colorScheme)
+        .alert("Переименовать папку", isPresented: $renaming) {
+            TextField("Название", text: $title)
+            Button("Сохранить") {
+                guard let list else { return }
+                Task {
+                    do { try await store.updateList(list, title: title) } catch {
+                        self.error = SharedListStore.message(for: error)
+                    }
+                }
+            }.disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || title.count > 100)
+            Button("Отмена", role: .cancel) {}
+        }
+        .confirmationDialog(
+            "Закрыть доступ к папке?",
+            isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Подтвердить", role: .destructive) {
+                guard let member = removing else { return }
+                Task {
+                    do {
+                        try await store.removeMember(member)
+                        if member.userID == store.accountID { dismiss() }
+                    } catch { self.error = SharedListStore.message(for: error) }
+                    removing = nil
+                }
+            }
+            Button("Отмена", role: .cancel) { removing = nil }
+        } message: {
+            Text("Участник потеряет доступ к общей папке. Его личные задачи сохранятся.")
+        }
+        .confirmationDialog(
+            "Удалить папку для всех участников?", isPresented: $deleting, titleVisibility: .visible
+        ) {
+            Button("Удалить", role: .destructive) {
+                guard let list else { return }
+                Task {
+                    do { try await store.updateList(list, title: list.title, delete: true); dismiss() } catch {
+                        self.error = SharedListStore.message(for: error)
+                    }
+                }
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text("Общая папка и её задачи станут недоступны всем участникам.")
+        }
         #if os(macOS)
-        .frame(minWidth: 540, idealWidth: 600, minHeight: 560)
+        .frame(minWidth: 520, idealWidth: 600, minHeight: 660)
         #endif
+    }
+
+    private func managementRow(_ title: String, icon: String, destructive: Bool = false, action: @escaping () -> Void)
+        -> some View
+    {
+        Button(action: action) {
+            HStack(spacing: 13) {
+                Image(systemName: icon).frame(width: 22)
+                Text(title).font(.system(size: 14, weight: .medium))
+                Spacer()
+                Image(systemName: "chevron.right").font(.system(size: 10))
+            }
+            .foregroundStyle(destructive ? Theme.Colors.danger : Theme.Colors.textPrimary)
+            .padding(18).frame(minHeight: 56).contentShape(Rectangle())
+        }.buttonStyle(.plain).disabled(!store.canManage)
     }
 }

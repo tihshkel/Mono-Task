@@ -76,6 +76,16 @@
 		FBA7F336EE42DE6804E337A8 /* Weekday.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E5FC278AC95FBC1A7D41D9 /* Weekday.swift */; };
 		FD80D29B55401B648A348DA2 /* Unbounded-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 154FC4CAF596290E8729DD82 /* Unbounded-OFL.txt */; };
 		FD8403D229E5966D2F0E9ED4 /* Tag.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AE357EE03BF29377B5F8664 /* Tag.swift */; };
+		6E0DA6D6C2D51D54D17638E1 /* IslandState.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED05F8855035DB89CE403451 /* IslandState.swift */; };
+		036A7D953B77494936FFDB16 /* IslandController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85BF5B584CE342FC976C50EA /* IslandController.swift */; };
+		FCC2E2BF356A2CA0401C3993 /* IslandView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87AD925C3C300C59C3D078A9 /* IslandView.swift */; };
+		99018C4C192288FD158592E2 /* IslandSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FA9CDC859D3F50840078A53 /* IslandSettingsView.swift */; };
+		F997C5A7D5F1196EF6C1F3AF /* FolderArtwork.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE8FE6215F5B6676BFB7D6EA /* FolderArtwork.swift */; };
+		416D9E7A31A1C761493DF968 /* WorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F6BFF115704012257946E61 /* WorkspaceView.swift */; };
+		767C4D55CA5EEF499AE49AF0 /* AppIconManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B944E5292E57420DFC80DA7F /* AppIconManager.swift */; };
+		BCCE1E735AC95CE2902E693F /* SharedQRCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6AD5993E8972123EA24E34A /* SharedQRCode.swift */; };
+		C4669E36C6A2F43B0695F83B /* SharedQRScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 799CEC0727CD820A7BE2A54A /* SharedQRScanner.swift */; };
+		CCF0661E0116B70EF5BC5C8D /* SharedInvitationViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C4CE9B3403EAFADA616F23 /* SharedInvitationViews.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -151,6 +161,16 @@
 		E335A3A68F057FF184CF5DCC /* KeyboardAnchoredLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardAnchoredLayout.swift; sourceTree = "<group>"; };
 		F9A6243FDB5BF71E2A75AED7 /* DailyNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyNote.swift; sourceTree = "<group>"; };
 		FF32836D7D6B3601352FA345 /* Unbounded-Black.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Unbounded-Black.ttf"; sourceTree = "<group>"; };
+		ED05F8855035DB89CE403451 /* IslandState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandState.swift; sourceTree = "<group>"; };
+		85BF5B584CE342FC976C50EA /* IslandController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandController.swift; sourceTree = "<group>"; };
+		87AD925C3C300C59C3D078A9 /* IslandView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandView.swift; sourceTree = "<group>"; };
+		0FA9CDC859D3F50840078A53 /* IslandSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandSettingsView.swift; sourceTree = "<group>"; };
+		AE8FE6215F5B6676BFB7D6EA /* FolderArtwork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderArtwork.swift; sourceTree = "<group>"; };
+		1F6BFF115704012257946E61 /* WorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceView.swift; sourceTree = "<group>"; };
+		B944E5292E57420DFC80DA7F /* AppIconManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIconManager.swift; sourceTree = "<group>"; };
+		E6AD5993E8972123EA24E34A /* SharedQRCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedQRCode.swift; sourceTree = "<group>"; };
+		799CEC0727CD820A7BE2A54A /* SharedQRScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedQRScanner.swift; sourceTree = "<group>"; };
+		15C4CE9B3403EAFADA616F23 /* SharedInvitationViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedInvitationViews.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -216,6 +236,9 @@
 		257BF4EA1E3F9503B78DF398 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				15C4CE9B3403EAFADA616F23 /* SharedInvitationViews.swift */,
+				799CEC0727CD820A7BE2A54A /* SharedQRScanner.swift */,
+				E6AD5993E8972123EA24E34A /* SharedQRCode.swift */,
 				988589621AF6556ED27EC9AF /* SharedListDetailView.swift */,
 				D9CDED2316BB6E749003D666 /* SharedListsView.swift */,
 				6F933CAF9D9AEBA7639A00C5 /* SharedMembersView.swift */,
@@ -235,6 +258,8 @@
 		2E17DA1E0C2E7535DD46357B /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				B944E5292E57420DFC80DA7F /* AppIconManager.swift */,
+				85BF5B584CE342FC976C50EA /* IslandController.swift */,
 				65A307997A6758A8AF1D608D /* AuthManager.swift */,
 				DAA060DB61C5DC9011878251 /* FocusService.swift */,
 				3B5111D66DFFD8D5546B0D24 /* NetworkMonitor.swift */,
@@ -287,6 +312,7 @@
 		8B1FBF3072DF551CA40CC800 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				ED05F8855035DB89CE403451 /* IslandState.swift */,
 				9012C003FCEC6881E4BF4F29 /* ActivityEntry.swift */,
 				BFDD1AC4CB5A29566F907D0B /* Bucket.swift */,
 				AF9CDEA275F2DE526A21B452 /* CompletedHistoryEntry.swift */,
@@ -325,6 +351,8 @@
 		A48C4E172EA69603650E22AA /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				AE8FE6215F5B6676BFB7D6EA /* FolderArtwork.swift */,
+				87AD925C3C300C59C3D078A9 /* IslandView.swift */,
 				E335A3A68F057FF184CF5DCC /* KeyboardAnchoredLayout.swift */,
 				85A0E16ED5C2973FD761E653 /* MonoComponents.swift */,
 				0D219CC1919C78774C6B1448 /* UndoDeletionToast.swift */,
@@ -346,6 +374,7 @@
 		B0CA8654153BC8D600B440B2 /* Navigation */ = {
 			isa = PBXGroup;
 			children = (
+				1F6BFF115704012257946E61 /* WorkspaceView.swift */,
 				BAEC1C951C07EE1C7B6BF2B3 /* AppTab.swift */,
 				0CFD02EF6F64559A7A13A948 /* ContentView.swift */,
 				BD34047BFD4C91DEA1C3DC0C /* MacRootView.swift */,
@@ -357,6 +386,7 @@
 		B25528B00D70DC1FAE073254 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				0FA9CDC859D3F50840078A53 /* IslandSettingsView.swift */,
 				3B86AABAAB29A4C562A9CCEE /* NotificationPreferencesView.swift */,
 				246C6A4BFD74A6DBF907830F /* SettingsView.swift */,
 				94A107A233647EEC4D743C45 /* TagEditSheet.swift */,
@@ -470,6 +500,16 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CCF0661E0116B70EF5BC5C8D /* SharedInvitationViews.swift in Sources */,
+				C4669E36C6A2F43B0695F83B /* SharedQRScanner.swift in Sources */,
+				BCCE1E735AC95CE2902E693F /* SharedQRCode.swift in Sources */,
+				767C4D55CA5EEF499AE49AF0 /* AppIconManager.swift in Sources */,
+				416D9E7A31A1C761493DF968 /* WorkspaceView.swift in Sources */,
+				F997C5A7D5F1196EF6C1F3AF /* FolderArtwork.swift in Sources */,
+				99018C4C192288FD158592E2 /* IslandSettingsView.swift in Sources */,
+				FCC2E2BF356A2CA0401C3993 /* IslandView.swift in Sources */,
+				036A7D953B77494936FFDB16 /* IslandController.swift in Sources */,
+				6E0DA6D6C2D51D54D17638E1 /* IslandState.swift in Sources */,
 				9F681DCA1963C90397676FF1 /* ActivityEntry.swift in Sources */,
 				047EDF9499D3B18C4F31768A /* AppTab.swift in Sources */,
 				4E761621CF470319EC10519A /* AuthManager.swift in Sources */,
@@ -538,13 +578,14 @@
 		211722197994BAE255E089CD /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIconPalette;
+				"ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES[sdk=iphone*]" = "AppIconLight AppIconDark AppIconLightPalette AppIconDarkPalette";
 				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 21;
+				CURRENT_PROJECT_VERSION = 23;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_FILE = MonoTask/Resources/Info.plist;
@@ -695,13 +736,14 @@
 		E04027EAD1BB80EAEB55FA4C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIconPalette;
+				"ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES[sdk=iphone*]" = "AppIconLight AppIconDark AppIconLightPalette AppIconDarkPalette";
 				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 21;
+				CURRENT_PROJECT_VERSION = 23;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_FILE = MonoTask/Resources/Info.plist;

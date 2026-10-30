@@ -1,6 +1,82 @@
 import XCTest
 
 @MainActor
+final class WorkspaceSharingTests: XCTestCase {
+    private let folderID = "workspace-shared-folder-33333333-3333-3333-3333-333333333333"
+
+    private func launch() -> XCUIApplication {
+        continueAfterFailure = false
+        let app = XCUIApplication(bundleIdentifier: "com.monotask")
+        app.launchArguments = ["--screenshots", "--shared-preview"]
+        app.launch()
+        XCTAssertTrue(app.buttons[folderID].waitForExistence(timeout: 10))
+        return app
+    }
+
+    func testSharedFolderShowsMembersAndOpensTasks() {
+        let app = launch()
+        let folder = app.buttons[folderID]
+        XCTAssertTrue(folder.label.contains("Вы"))
+        XCTAssertTrue(folder.label.contains("Саша"))
+        folder.tap()
+        XCTAssertTrue(app.buttons["shared-add-task"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Подготовить общий план"].exists)
+        app.buttons["shared-manage-members"].tap()
+        XCTAssertTrue(app.staticTexts["Саша"].waitForExistence(timeout: 4))
+    }
+
+    func testCreatedSharedFolderAppearsAutomatically() {
+        let app = launch()
+        app.buttons["workspace-shared-folders"].tap()
+        XCTAssertTrue(app.buttons["shared-create-list"].waitForExistence(timeout: 5))
+        app.buttons["shared-create-list"].tap()
+        let name = app.textFields["shared-folder-name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 4))
+        name.tap()
+        name.typeText("Командная папка")
+        app.swipeUp()
+        app.buttons["shared-confirm-create"].tap()
+        XCTAssertTrue(app.images["shared-invite-qr"].waitForExistence(timeout: 5))
+        app.buttons["shared-open-created-folder"].tap()
+        XCTAssertTrue(app.buttons["shared-add-task"].waitForExistence(timeout: 5))
+        app.navigationBars.buttons.firstMatch.tap()
+        app.buttons["Закрыть"].tap()
+        let folder = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Общая папка Командная папка'"))
+            .firstMatch
+        XCTAssertTrue(folder.waitForExistence(timeout: 5))
+        let search = app.textFields["Поиск задач и папок"]
+        search.tap()
+        search.typeText("Командная")
+        XCTAssertTrue(folder.exists)
+        XCTAssertFalse(app.buttons[folderID].exists)
+    }
+
+    func testProfileAndThemePreviews() {
+        let app = launch()
+        app.buttons["navigation-settings"].tap()
+        XCTAssertTrue(app.buttons["settings-account"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["settings-account"].label.contains("Мой профиль"))
+        app.buttons["settings-account"].tap()
+        XCTAssertTrue(app.buttons["Синхронизировать сейчас"].waitForExistence(timeout: 5))
+        app.navigationBars.buttons.firstMatch.tap()
+        let appearance = app.descendants(matching: .any)
+            .matching(identifier: "settings-page-list.bullet.rectangle").firstMatch
+        app.swipeUp()
+        appearance.tap()
+        XCTAssertTrue(app.staticTexts["Оформление пространства"].waitForExistence(timeout: 5))
+        let dark = app.segmentedControls.buttons["Тёмная"]
+        let light = app.segmentedControls.buttons["Светлая"]
+        let system = app.segmentedControls.buttons["Системная"]
+        let original = dark.isSelected ? "Тёмная" : system.isSelected ? "Системная" : "Светлая"
+        dark.tap()
+        XCTAssertTrue(dark.isSelected)
+        light.tap()
+        XCTAssertTrue(light.isSelected)
+        app.segmentedControls.buttons[original].tap()
+    }
+}
+
+@MainActor
 final class ReviewTests: XCTestCase {
     var app: XCUIApplication!
     override func setUpWithError() throws {
@@ -433,19 +509,23 @@ final class SharedListUITests: XCTestCase {
         app.buttons["shared-list-33333333-3333-3333-3333-333333333333"].tap()
         app.buttons["shared-manage-members"].tap()
         XCTAssertTrue(app.staticTexts["Саша"].waitForExistence(timeout: 4))
-        let create = app.buttons["shared-create-invite"]
-        if !create.isHittable { app.swipeUp() }
-        create.tap()
+        app.buttons["shared-open-invite"].tap()
+        XCTAssertTrue(app.images["shared-invite-qr"].waitForExistence(timeout: 5))
+        app.swipeUp()
+        app.buttons["Код для ручного ввода"].tap()
         XCTAssertTrue(app.staticTexts["shared-generated-code"].waitForExistence(timeout: 4))
         XCTAssertEqual(app.staticTexts["shared-generated-code"].label.count, 32)
         let shot = XCTAttachment(screenshot: app.screenshot())
         shot.name = "SharedListInvitation"
         shot.lifetime = .keepAlways
         add(shot)
-        app.swipeDown()
+        app.navigationBars.buttons["Готово"].firstMatch.tap()
         app.buttons["Удалить"].tap()
         app.buttons["Подтвердить"].tap()
-        XCTAssertFalse(app.staticTexts["Саша"].exists)
+        let removed = app.descendants(matching: .any).matching(
+            identifier: "shared-member-22222222-2222-2222-2222-222222222222"
+        ).firstMatch
+        XCTAssertTrue(removed.waitForNonExistence(timeout: 5))
     }
 
     func testLiveHTTPSInvitationOpensApp() throws {
@@ -455,7 +535,8 @@ final class SharedListUITests: XCTestCase {
         let app = XCUIApplication(bundleIdentifier: "com.monotask")
         app.launchArguments = ["--screenshots", "--shared-preview"]
         app.launch()
-        XCTAssertTrue(app.staticTexts["СЕГОДНЯ"].waitForExistence(timeout: 10))
+        XCTAssertTrue(
+            app.buttons["workspace-shared-folder-33333333-3333-3333-3333-333333333333"].waitForExistence(timeout: 10))
         let safari = XCUIApplication(bundleIdentifier: "com.apple.mobilesafari")
         safari.open(URL(string: "https://egoar777.github.io/MonoTask/join/#0123456789abcdef0123456789abcdef")!)
         let link = safari.links.matching(NSPredicate(format: "label BEGINSWITH 'Открыть в MonoTask'")).firstMatch
@@ -472,40 +553,49 @@ final class SharedListUITests: XCTestCase {
         let confirmation = safari.buttons.matching(NSPredicate(format: "label == 'Open' OR label == 'Открыть'"))
             .firstMatch
         if confirmation.waitForExistence(timeout: 4) { confirmation.tap() }
-        XCTAssertTrue(app.textFields["shared-invite-code"].waitForExistence(timeout: 10))
-        XCTAssertEqual(app.textFields["shared-invite-code"].value as? String, "0123456789abcdef0123456789abcdef")
-        XCTAssertTrue(app.buttons["Принять"].isEnabled)
+        XCTAssertTrue(
+            app.descendants(matching: .any).matching(identifier: "shared-invite-code").firstMatch.waitForExistence(
+                timeout: 10))
+        XCTAssertEqual(
+            app.descendants(matching: .any).matching(identifier: "shared-invite-code").firstMatch.value as? String,
+            "0123456789abcdef0123456789abcdef")
+        XCTAssertTrue(app.buttons["shared-confirm-join"].isEnabled)
     }
 
     func testInvitationOpensJoinSheet() {
         let app = XCUIApplication(bundleIdentifier: "com.monotask")
         app.launchArguments = ["--screenshots", "--shared-preview"]
         app.launch()
-        XCTAssertTrue(app.staticTexts["СЕГОДНЯ"].waitForExistence(timeout: 10))
+        XCTAssertTrue(
+            app.buttons["workspace-shared-folder-33333333-3333-3333-3333-333333333333"].waitForExistence(timeout: 10))
         let code = "0123456789abcdef0123456789abcdef"
         app.open(URL(string: "com.monotask.ios://join?code=\(code)")!)
-        let field = app.textFields["shared-invite-code"]
+        let field = app.descendants(matching: .any).matching(identifier: "shared-invite-code").firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 8))
         XCTAssertEqual(field.value as? String, code)
-        XCTAssertTrue(app.buttons["Принять"].isEnabled)
-        app.buttons["Принять"].tap()
+        XCTAssertTrue(app.buttons["shared-confirm-join"].isEnabled)
+        app.buttons["shared-confirm-join"].tap()
         XCTAssertTrue(app.buttons["shared-add-task"].waitForExistence(timeout: 5))
     }
 
     func testCreateListAndValidateJoinInput() {
         let app = launch()
         app.buttons["shared-join-list"].tap()
-        let code = app.textFields["shared-invite-code"]
+        let code = app.descendants(matching: .any).matching(identifier: "shared-invite-code").firstMatch
         XCTAssertTrue(code.waitForExistence(timeout: 4))
         code.tap()
         code.typeText("invalid")
-        XCTAssertFalse(app.buttons["Принять"].isEnabled)
+        XCTAssertFalse(app.buttons["shared-confirm-join"].isEnabled)
         app.buttons["Отмена"].tap()
         app.buttons["shared-create-list"].tap()
-        let name = app.alerts.textFields.firstMatch
+        let name = app.textFields["shared-folder-name"]
         XCTAssertTrue(name.waitForExistence(timeout: 4))
-        name.typeText("Новый общий список")
-        app.alerts.buttons["Создать"].tap()
+        name.tap()
+        name.typeText("Новая общая папка")
+        app.swipeUp()
+        app.buttons["shared-confirm-create"].tap()
+        XCTAssertTrue(app.images["shared-invite-qr"].waitForExistence(timeout: 5))
+        app.buttons["shared-open-created-folder"].tap()
         XCTAssertTrue(app.buttons["shared-add-task"].waitForExistence(timeout: 4))
         XCTAssertTrue(app.staticTexts["0 / 0 выполнено"].exists)
     }

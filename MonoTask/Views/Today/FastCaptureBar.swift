@@ -10,6 +10,10 @@ struct FastCaptureBar: View {
     @State private var taskTitle: String = ""
     @State private var isHighPriority: Bool = false
     @FocusState private var isFocused: Bool
+    @Query(sort: [SortDescriptor(\Tag.sortOrder), SortDescriptor(\Tag.createdAt)]) private var tags: [Tag]
+    @State private var folderChoice: CaptureFolderChoice = .unassigned
+    @State private var newFolderName = ""
+    @State private var isCaptureExpanded = false
 
     init(activeTag: Tag?, isCaptureActive: Binding<Bool> = .constant(false)) {
         self.activeTag = activeTag
@@ -21,6 +25,20 @@ struct FastCaptureBar: View {
     }
 
     var body: some View {
+        VStack(spacing: 8) {
+            if isCaptureExpanded || !taskTitle.isEmpty {
+                CaptureFolderPicker(tags: tags, choice: $folderChoice, newName: $newFolderName) { isFocused = true }
+                    .padding(.horizontal, 12)
+            }
+            inputBar
+        }
+        .onAppear { folderChoice = activeTag.map { .existing($0.id) } ?? .unassigned }
+        .onChange(of: activeTag?.id) { _, _ in
+            if taskTitle.isEmpty { folderChoice = activeTag.map { .existing($0.id) } ?? .unassigned }
+        }
+    }
+
+    private var inputBar: some View {
         HStack(spacing: 6) {
             PriorityToggleButton(isOn: $isHighPriority, size: 36)
                 .fixedSize()
@@ -66,6 +84,7 @@ struct FastCaptureBar: View {
                 Button {
                     isFocused = false
                     isCaptureActive = false
+                    isCaptureExpanded = false
                 } label: {
                     Image(systemName: "keyboard.chevron.compact.down")
                         .font(.system(size: 16))
@@ -95,6 +114,7 @@ struct FastCaptureBar: View {
         .background(Theme.Colors.background)
         .transaction { $0.animation = nil }
         .onChange(of: isFocused) { _, focused in
+            if focused { isCaptureExpanded = true }
             if focused != isCaptureActive {
                 isCaptureActive = focused
             }
@@ -132,7 +152,13 @@ struct FastCaptureBar: View {
         }
 
         Haptics.light()
-        modelContext.createTask(title: taskTitle, tag: activeTag, highPriority: isHighPriority)
+        guard
+            let created = modelContext.createTask(
+                title: taskTitle, folder: folderChoice, newFolderName: newFolderName, tags: tags,
+                highPriority: isHighPriority)
+        else { return }
+        folderChoice = created.tags.first.map { .existing($0.id) } ?? .unassigned
+        newFolderName = ""
 
         taskTitle = ""
         isHighPriority = false

@@ -19,6 +19,11 @@ struct TaskEditSheet: View {
     @State private var didFinish: Bool = false
     @State private var reminderEnabled = false
     @State private var reminderDate = Date.now.addingTimeInterval(3600)
+    @State private var reminderLead = 15
+    @State private var customLead = false
+    @State private var customAmount = 1
+    @State private var customUnit = 60
+    @State private var showsDeadlineCalendar = false
     @State private var notifications = NotificationService.shared
 
     @State private var newSubtaskTitle: String = ""
@@ -62,6 +67,13 @@ struct TaskEditSheet: View {
             selectedTagId = task.tags.first?.id
             reminderEnabled = task.dueDate != nil
             reminderDate = task.dueDate ?? Date.now.addingTimeInterval(3600)
+            reminderLead = task.dueDate == nil ? 15 : (task.reminderMinutesBefore ?? -1)
+            if reminderLead > 0 && !ReminderLeadTime.presets.contains(reminderLead) {
+                customLead = true
+                customUnit = reminderLead % 1_440 == 0 ? 1_440 : reminderLead % 60 == 0 ? 60 : 1
+                customAmount = reminderLead / customUnit
+            }
+            Task { await notifications.checkAuthorization() }
         }
         .onDisappear {
             isSubtaskFieldFocused = false
@@ -203,51 +215,149 @@ struct TaskEditSheet: View {
         }
     }
 
+    private var selectedLead: Int? {
+        guard reminderLead >= 0 else { return nil }
+        return customLead ? min(525_600, max(1, customAmount) * customUnit) : reminderLead
+    }
+
+    private var previewReminderDate: Date? {
+        selectedLead.map { reminderDate.addingTimeInterval(-Double($0) * 60) }
+    }
+
+    private func enableNotificationsIfNeeded() {
+        guard reminderEnabled, selectedLead != nil, !task.isDone else { return }
+        Task { await notifications.enableTaskReminders() }
+    }
+
     private var reminderCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionTitle(text: "Напоминание")
-            GroupCard(padding: 14) {
-                VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(text: "Срок и уведомление")
+            GroupCard(padding: 16) {
+                VStack(alignment: .leading, spacing: 15) {
                     Toggle(
-                        "Напомнить о задаче",
                         isOn: Binding(
                             get: { reminderEnabled },
                             set: { enabled in
-                                withAnimation(reduceMotion ? nil : Theme.Motion.standard) { reminderEnabled = enabled }
-                                if enabled { Task { await notifications.enableTaskReminders() } }
+                                reminderEnabled = enabled
+                                if enabled { enableNotificationsIfNeeded() }
                             })
-                    )
-                    .disabled(task.isDone)
+                    ) {
+                        Label("Крайний срок", systemImage: "calendar")
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .accessibilityIdentifier("task-deadline-enabled")
                     if reminderEnabled {
-                        DatePicker(
-                            "Дата и время", selection: $reminderDate,
-                            displayedComponents: [.date, .hourAndMinute])
-                        if reminderDate <= .now {
-                            Text("Это время уже прошло. Выберите будущее время, чтобы получить напоминание.")
-                                .foregroundColor(Theme.Colors.priority)
+                        Hairline()
+                        Button {
+                            hideKeyboard()
+                            withAnimation(reduceMotion ? nil : Theme.Motion.standard) { showsDeadlineCalendar.toggle() }
+                        } label: {
+                            HStack {
+                                Text("Дата").foregroundStyle(Theme.Colors.textSecondary)
+                                Spacer()
+                                Text(
+                                    reminderDate.formatted(
+                                        .dateTime.day().month(.wide).year().locale(Locale(identifier: "ru_RU"))))
+                                Image(systemName: "chevron.down").font(.system(size: 10, weight: .semibold))
+                                    .rotationEffect(.degrees(showsDeadlineCalendar ? 180 : 0))
+                            }.frame(minHeight: 32).contentShape(Rectangle())
+                        }.buttonStyle(.plain).accessibilityIdentifier("task-deadline-calendar")
+                        if showsDeadlineCalendar {
+                            #if os(iOS)
+                            DatePicker("Дата срока", selection: $reminderDate, displayedComponents: .date)
+                                .datePickerStyle(.graphical).labelsHidden()
+                                .environment(\.locale, Locale(identifier: "ru_RU"))
+                            #else
+                            DatePicker("Дата срока", selection: $reminderDate, displayedComponents: .date)
+                                .datePickerStyle(.compact)
+                            #endif
                         }
-                        if notifications.authorization == .denied {
-                            Text(
-                                "Уведомления запрещены в настройках системы. Разрешите их в разделе уведомлений MonoTask."
-                            )
-                            .foregroundColor(Theme.Colors.priority)
-                        } else if !notifications.preferences.enabled || !notifications.preferences.taskReminders {
-                            Text("Напоминания задач выключены в настройках MonoTask.")
-                                .foregroundColor(Theme.Colors.priority)
+                        DatePicker("Время", selection: $reminderDate, displayedComponents: .hourAndMinute)
+                            .accessibilityIdentifier("task-deadline-time")
+                            .environment(\.locale, Locale(identifier: "ru_RU"))
+                        Hairline()
+                        Menu {
+                            Button("Без уведомления") {
+                                customLead = false; reminderLead = -1
+                            }
+                            ForEach(ReminderLeadTime.presets, id: \.self) { minutes in
+                                Button(ReminderLeadTime.label(minutes)) {
+                                    customLead = false; reminderLead = minutes
+                                    enableNotificationsIfNeeded()
+                                }
+                            }
+                            Button("Свой интервал…") {
+                                customLead = true; reminderLead = 1
+                                enableNotificationsIfNeeded()
+                            }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: selectedLead == nil ? "bell.slash" : "bell")
+                                    .foregroundStyle(Theme.Colors.accent)
+                                Text("Напомнить").foregroundStyle(Theme.Colors.textSecondary)
+                                Spacer(minLength: 4)
+                                Text(ReminderLeadTime.label(selectedLead)).fontWeight(.medium)
+                                Image(systemName: "chevron.up.chevron.down").font(.system(size: 9, weight: .semibold))
+                            }.frame(minHeight: 36).contentShape(Rectangle())
+                        }.menuStyle(.borderlessButton).accessibilityIdentifier("task-reminder-lead")
+                        if customLead && selectedLead != nil {
+                            HStack(spacing: 12) {
+                                Text("За").foregroundStyle(Theme.Colors.textSecondary)
+                                TextField("Количество", value: $customAmount, format: .number.grouping(.never))
+                                    .textFieldStyle(.plain).frame(width: 60)
+                                    .padding(10).background(Theme.Colors.fill, in: RoundedRectangle(cornerRadius: 10))
+                                    #if os(iOS)
+                                .keyboardType(.numberPad)
+                                    #endif
+                                    .accessibilityIdentifier("task-reminder-custom-amount")
+                                    .onChange(of: customAmount) { _, value in
+                                        customAmount = min(525_600 / customUnit, max(1, value))
+                                    }
+                                Picker("Единица времени", selection: $customUnit) {
+                                    Text("минут").tag(1)
+                                    Text("часов").tag(60)
+                                    Text("дней").tag(1_440)
+                                }.labelsHidden().pickerStyle(.menu)
+                                Spacer(minLength: 0)
+                            }
+                        }
+                        if task.isDone {
+                            deadlineHint("Задача выполнена — уведомление отменено.", warning: false)
+                        } else if reminderDate <= .now {
+                            deadlineHint("Крайний срок уже прошёл. Выберите будущие дату и время.", warning: true)
+                        } else if let fireDate = previewReminderDate {
+                            if fireDate <= .now {
+                                deadlineHint(
+                                    "Время напоминания уже прошло. Выберите меньший интервал или более поздний срок.",
+                                    warning: true)
+                            } else {
+                                deadlineHint(
+                                    "Уведомление: "
+                                        + fireDate.formatted(
+                                            .dateTime.day().month(.abbreviated).hour().minute().locale(
+                                                Locale(identifier: "ru_RU"))), warning: false)
+                            }
+                            if notifications.authorization == .denied {
+                                deadlineHint(
+                                    "Разрешите уведомления MonoTask в настройках системы, чтобы получить напоминание.",
+                                    warning: true)
+                            } else if !notifications.preferences.enabled || !notifications.preferences.taskReminders {
+                                deadlineHint("Напоминания задач выключены в настройках MonoTask.", warning: true)
+                            }
+                        } else {
+                            deadlineHint("Срок появится в календаре. Уведомление не запланировано.", warning: false)
                         }
                     }
-                    if task.isDone {
-                        Text("Задача выполнена — напоминание отменено.")
-                    } else {
-                        Text(
-                            "Время сохраняется вместе с задачей. Напоминание появится на устройствах, где разрешены уведомления."
-                        )
-                    }
-                }
-                .font(Theme.Typography.callout)
-                .foregroundColor(Theme.Colors.textPrimary)
+                }.font(.system(size: 13)).foregroundStyle(Theme.Colors.textPrimary)
             }
         }
+        .animation(reduceMotion ? nil : Theme.Motion.standard, value: reminderEnabled)
+    }
+
+    private func deadlineHint(_ text: String, warning: Bool) -> some View {
+        Label(text, systemImage: warning ? "exclamationmark.circle" : "info.circle")
+            .font(.system(size: 11)).foregroundStyle(warning ? Theme.Colors.priority : Theme.Colors.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - Subtasks
@@ -460,9 +570,17 @@ struct TaskEditSheet: View {
             changed = true
         }
 
+        let hadDeadline = task.dueDate != nil
         let newReminder = reminderEnabled ? reminderDate : nil
         if task.dueDate != newReminder {
             task.dueDate = newReminder
+            changed = true
+        }
+
+        let newLead = reminderEnabled ? selectedLead : (hadDeadline ? nil : task.reminderMinutesBefore)
+        if task.reminderMinutesBefore != newLead {
+            task.reminderMinutesBefore = newLead
+            task.reminderSyncPending = true
             changed = true
         }
 

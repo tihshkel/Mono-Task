@@ -2,6 +2,17 @@ import Foundation
 import SwiftData
 
 extension ModelContext {
+    @MainActor
+    @discardableResult
+    func createTask(title: String, folder: CaptureFolderChoice, newFolderName: String, tags: [Tag], highPriority: Bool)
+        -> TaskItem?
+    {
+        guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        let tag = folder.resolve(tags: tags, newName: newFolderName, taskTitle: title)
+        if let tag, !tags.contains(where: { $0.id == tag.id }) { insert(tag) }
+        return createTask(title: title, tag: tag, highPriority: highPriority)
+    }
+
     /// Creates a task from a capture bar and schedules a sync.
     @MainActor
     @discardableResult

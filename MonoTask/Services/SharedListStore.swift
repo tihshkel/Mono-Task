@@ -14,6 +14,7 @@ final class SharedListStore {
     private(set) var errorMessage: String?
     var isPresented = false
     var pendingInviteCode: String?
+    private(set) var invitations: [UUID: SharedInvite] = [:]
     @ObservationIgnored private var request: Task<Void, Never>?
     @ObservationIgnored private var requestToken: UUID?
     @ObservationIgnored private var actionToken: UUID?
@@ -62,6 +63,7 @@ final class SharedListStore {
         isAvailable = false
         errorMessage = nil
         cache = SharedCache()
+        invitations = [:]
         accountID = owner
         guard let owner else { return }
         #if DEBUG && (targetEnvironment(simulator) || os(macOS))
@@ -149,6 +151,7 @@ final class SharedListStore {
             let remote: SharedSnapshot = try await client.rpc("monotask_shared_snapshot").execute().value
             guard owns(owner) else { return }
             cache.reconcile(remote)
+            invitations = invitations.filter { id, _ in remote.lists.contains { $0.id == id && $0.ownerID == owner } }
             isAvailable = true
             errorMessage = pendingError
             persist()
@@ -203,14 +206,18 @@ final class SharedListStore {
 
     func createInvite(listID: UUID) async throws -> SharedInvite {
         if Self.isPreview {
-            return SharedInvite(
+            let invite = SharedInvite(
                 code: UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased(),
                 expiresAt: .now.addingTimeInterval(72 * 3600))
+            invitations[listID] = invite
+            return invite
         }
-        return try await action { client in
+        let invite: SharedInvite = try await action { client in
             try await client.rpc("monotask_shared_create_invite", params: ["p_list_id": listID.uuidString]).execute()
                 .value
         }
+        invitations[listID] = invite
+        return invite
     }
 
     func removeMember(_ member: SharedMember) async throws {

@@ -20,6 +20,7 @@ struct HeatmapView: View {
     @Query private var history: [CompletedHistoryEntry]
     @State private var period: ActivityPeriod = .month
     @State private var expanded: Set<UUID> = []
+    @Namespace private var periodSelection
     @State private var selectedDay: Date?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -51,21 +52,16 @@ struct HeatmapView: View {
         ScrollViewReader { scrollProxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    ScreenHeading(text: "АНАЛИТИКА")
-                    Picker(
-                        "Период",
-                        selection: Binding(
-                            get: { period },
-                            set: { value in
-                                withAnimation(reduceMotion ? nil : Theme.Motion.standard) { period = value }
-                            })
-                    ) {
-                        ForEach(ActivityPeriod.allCases) { Text($0.rawValue).tag($0) }
-                    }.pickerStyle(.segmented)
-                    HStack(spacing: 12) {
-                        statistic("\(filtered.count)", label: "Выполнено", accent: true)
-                        statistic("\(Set(filtered.map(\.day)).count)", label: "Активных дней")
-                        statistic("\(streak)", label: "Серия, дн.")
+                    PageIntro(title: "Аналитика", subtitle: "Ваш ритм за неделю, месяц и год.")
+                    periodPicker
+                    GroupCard(padding: 18) {
+                        HStack(spacing: 14) {
+                            statistic("\(filtered.count)", label: "Выполнено", accent: true)
+                            Rectangle().fill(Theme.Colors.hairline).frame(width: 0.5, height: 35)
+                            statistic("\(Set(filtered.map(\.day)).count)", label: "Активных дней")
+                            Rectangle().fill(Theme.Colors.hairline).frame(width: 0.5, height: 35)
+                            statistic("\(streak)", label: "Серия, дней")
+                        }
                     }
                     GroupCard(padding: 16) {
                         HStack {
@@ -116,14 +112,15 @@ struct HeatmapView: View {
             .background(Theme.Colors.background)
             .foregroundStyle(Theme.Colors.textPrimary)
             .refreshable { try? await SupabaseSyncService.shared.sync(context: context) }
-            .monoScrollEdge()
+            .scrollIndicators(.hidden)
             .sheet(isPresented: Binding(get: { selectedDay != nil }, set: { if !$0 { selectedDay = nil } })) {
                 dayDetails
                     .padding(24)
-                    .preferredColorScheme(.dark)
+                    .preferredColorScheme(Theme.colorScheme)
                     #if os(iOS)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+                .presentationBackground(Theme.Colors.background)
                     #else
                 .frame(minWidth: 400, minHeight: 300)
                     #endif
@@ -144,18 +141,38 @@ struct HeatmapView: View {
         }
     }
 
+    private var periodPicker: some View {
+        HStack(spacing: 4) {
+            ForEach(ActivityPeriod.allCases) { item in
+                Button {
+                    Haptics.selection()
+                    withAnimation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.88)) { period = item }
+                } label: {
+                    Text(item.rawValue).font(.system(size: 12, weight: period == item ? .semibold : .medium))
+                        .foregroundStyle(period == item ? Theme.Colors.textPrimary : Theme.Colors.textSecondary)
+                        .frame(maxWidth: .infinity).frame(height: 35)
+                        .background {
+                            if period == item {
+                                RoundedRectangle(cornerRadius: 11).fill(Theme.Colors.surfaceElevated)
+                                    .shadow(color: .black.opacity(0.035), radius: 3, y: 1)
+                                    .matchedGeometryEffect(id: "activity-period", in: periodSelection)
+                            }
+                        }.contentShape(Rectangle())
+                }.buttonStyle(.plain).accessibilityAddTraits(period == item ? .isSelected : [])
+                    .accessibilityIdentifier("activity-period-" + item.id)
+            }
+        }.padding(4).background(Theme.Colors.fill.opacity(0.7), in: RoundedRectangle(cornerRadius: 15))
+    }
+
     private func statistic(_ value: String, label: String, accent: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(value).font(Theme.Typography.figure(24)).foregroundStyle(
-                accent ? Theme.Colors.accent : Theme.Colors.textPrimary
-            )
-            .contentTransition(.numericText())
-            .animation(reduceMotion ? nil : Theme.Motion.standard, value: value)
-            Text(label).font(.system(size: 12)).foregroundStyle(Theme.Colors.textSecondary).lineLimit(1)
-                .minimumScaleFactor(0.85)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading).padding(12)
-        .background(Theme.Colors.surface, in: RoundedRectangle(cornerRadius: 14))
+        VStack(alignment: .leading, spacing: 6) {
+            Text(value).font(.system(size: 27, weight: .medium, design: .rounded))
+                .foregroundStyle(accent ? Theme.Colors.accent : Theme.Colors.textPrimary)
+                .contentTransition(.numericText())
+                .animation(reduceMotion ? nil : Theme.Motion.standard, value: value)
+            Text(label).font(.system(size: 10)).foregroundStyle(Theme.Colors.textSecondary)
+                .lineLimit(1).minimumScaleFactor(0.85)
+        }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var weekdayValues: [Int] {
@@ -172,12 +189,16 @@ struct HeatmapView: View {
                     Text("\(values[index])").font(Theme.Typography.numeric(12)).foregroundStyle(
                         Theme.Colors.textSecondary)
                     RoundedRectangle(cornerRadius: 5)
-                        .fill(weekday == .current ? Theme.Colors.accent : Theme.Colors.accent.opacity(0.45))
-                        .frame(height: max(4, 68 * Double(values[index]) / Double(maximum)))
+                        .fill(
+                            values[index] == 0
+                                ? Theme.Colors.fillStrong.opacity(0.5)
+                                : weekday == .current ? Theme.Colors.accent : Theme.Colors.accent.opacity(0.45)
+                        )
+                        .frame(width: 18, height: max(3, 58 * Double(values[index]) / Double(maximum)))
                     Text(weekday.shortName).font(Theme.Typography.caption).foregroundStyle(Theme.Colors.textSecondary)
                 }.frame(maxWidth: .infinity)
             }
-        }.frame(height: 110, alignment: .bottom)
+        }.frame(height: 98, alignment: .bottom)
     }
 
     private var calendarGrid: some View {
@@ -246,17 +267,17 @@ struct HeatmapView: View {
             selectedDay = day
         } label: {
             Text("\(Calendar.current.component(.day, from: day))")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(count > 1 ? Theme.Colors.onAccent : Theme.Colors.textPrimary)
-                .frame(maxWidth: .infinity, minHeight: 30)
-                .background(activityColor(count), in: RoundedRectangle(cornerRadius: 6))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6).strokeBorder(
-                        day.isToday ? Theme.Colors.textPrimary : .clear, lineWidth: 1))
+                .font(.system(size: 12, weight: day.isToday || count > 0 ? .semibold : .regular))
+                .foregroundStyle(count >= 4 ? Theme.Colors.onAccent : Theme.Colors.textPrimary)
+                .frame(width: 32, height: 32)
+                .background(count > 0 ? activityColor(count) : .clear, in: Circle())
+                .overlay(Circle().strokeBorder(day.isToday ? Theme.Colors.accent.opacity(0.8) : .clear, lineWidth: 1))
+                .frame(maxWidth: .infinity).frame(height: 40).contentShape(Rectangle())
         }.buttonStyle(.plain).accessibilityLabel("\(day.formattedMediumDate): \(count) выполнено")
     }
     private func activityColor(_ count: Int) -> Color {
-        count == 0 ? Theme.Colors.fillStrong : Theme.Colors.accent.opacity(min(1, 0.25 + Double(count) * 0.2))
+        count == 0
+            ? Theme.Colors.fillStrong.opacity(0.4) : Theme.Colors.accent.opacity(min(1, 0.25 + Double(count) * 0.2))
     }
 
     private func categoryRow(_ tag: Tag) -> some View {
@@ -293,8 +314,9 @@ struct HeatmapView: View {
         let records = completions.filter { $0.day == day }
         return ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text(day.formattedWeekdayAndDate).font(Theme.Typography.title)
-                Text("Выполнено: \(records.count)").font(Theme.Typography.heading(24)).foregroundStyle(
+                Text(day.formatted(.dateTime.day().month(.wide).locale(Locale(identifier: "ru_RU"))))
+                    .font(.system(size: 22, weight: .semibold))
+                Text("Выполнено: \(records.count)").font(.system(size: 16, weight: .medium)).foregroundStyle(
                     Theme.Colors.accent)
                 if records.isEmpty {
                     Text("В этот день выполненных задач нет.").foregroundStyle(Theme.Colors.textSecondary)
@@ -310,7 +332,7 @@ struct HeatmapView: View {
                     }
                 }
             }.frame(maxWidth: .infinity, alignment: .leading)
-        }
+        }.scrollIndicators(.hidden)
     }
 
     private var streak: Int {

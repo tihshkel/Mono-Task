@@ -5,6 +5,7 @@ import SwiftData
 struct MonoTaskApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var auth = AuthManager.shared
+    @AppStorage("monotask_appearance") private var appearance = "light"
 
     init() {
         Theme.registerFonts()
@@ -12,10 +13,11 @@ struct MonoTaskApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup("MonoTask", id: "workspace") {
             rootView
                 .environment(auth)
-                .preferredColorScheme(Theme.colorScheme)
+                .preferredColorScheme(appearance == "system" ? nil : appearance == "dark" ? .dark : .light)
+                .modifier(AppIconAppearance(preference: appearance))
                 .onOpenURL { url in
                     if !SharedListStore.shared.receiveInvitation(url) {
                         Task { await auth.handleAuthURL(url) }
@@ -35,9 +37,12 @@ struct MonoTaskApp: App {
                     if phase == .active { syncActiveStore() }
                     if phase == .background { TaskDeletionManager.shared.commitPending() }
                 }
+                #if os(macOS)
+            .modifier(MacIslandLifecycle())
+                #endif
         }
         #if os(macOS)
-        .defaultSize(width: 1060, height: 720)
+        .defaultSize(width: 1180, height: 820)
         .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .newItem) {
@@ -49,6 +54,13 @@ struct MonoTaskApp: App {
                     NotificationCenter.default.post(name: .macTriggerSync, object: nil)
                 }
                 .keyboardShortcut("r", modifiers: .command)
+            }
+            CommandMenu("Островок") {
+                Button("Раскрыть MonoTask Island") { IslandController.shared.preview() }
+                .keyboardShortcut("i", modifiers: [.command, .option])
+                Button("Добавить задачу в островке") { IslandController.shared.beginCapture() }
+                .keyboardShortcut("n", modifiers: [.command, .option])
+                .disabled(!IslandController.shared.preferences.enabled)
             }
         }
         #endif
@@ -67,7 +79,9 @@ struct MonoTaskApp: App {
 
     @ViewBuilder private var rootView: some View {
         #if DEBUG && (targetEnvironment(simulator) || os(macOS))
-        if ProcessInfo.processInfo.arguments.contains("--screenshots") {
+        if ProcessInfo.processInfo.arguments.contains("--auth-preview") {
+            AuthView()
+        } else if ProcessInfo.processInfo.arguments.contains("--screenshots") {
             ScreenshotPreviewRoot()
         } else if ProcessInfo.processInfo.arguments.contains("--scroll-gesture-test") {
             ScrollGestureTestRoot()

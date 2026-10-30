@@ -10,6 +10,7 @@ struct TagEditSheet: View {
     var tagToEdit: Tag?
 
     @State private var name: String = ""
+    @State private var selectedIcon = "square.stack.3d.up.fill"
     @State private var selectedColorHex: String = Theme.Colors.tagColors[0]
     @State private var selectedWeekdays: Set<Weekday> = []
     @State private var confirmingDelete = false
@@ -63,6 +64,9 @@ struct TagEditSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 26) {
 
+                    FolderArtwork(tint: Theme.Colors.tagColor(selectedColorHex), icon: selectedIcon)
+                        .frame(width: 160, height: 125).frame(maxWidth: .infinity)
+
                     HStack(spacing: 12) {
                         Circle()
                             .fill(Theme.Colors.tagColor(selectedColorHex))
@@ -98,6 +102,32 @@ struct TagEditSheet: View {
                         }
                     }
 
+                    VStack(alignment: .leading, spacing: 12) {
+                        EyebrowLabel(text: "Значок папки")
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 42))], spacing: 10) {
+                            ForEach(
+                                [
+                                    "square.stack.3d.up.fill", "briefcase.fill", "graduationcap.fill", "house.fill",
+                                    "heart.fill", "paintpalette.fill", "airplane", "book.closed.fill", "leaf.fill",
+                                    "sparkles", "laptopcomputer", "camera.fill",
+                                ], id: \.self
+                            ) { icon in
+                                Button {
+                                    selectedIcon = icon
+                                } label: {
+                                    Image(systemName: icon).font(.system(size: 19))
+                                        .foregroundStyle(
+                                            selectedIcon == icon ? Theme.Colors.accent : Theme.Colors.textSecondary
+                                        )
+                                        .frame(width: 40, height: 40)
+                                        .background(
+                                            selectedIcon == icon
+                                                ? Theme.Colors.accent.opacity(0.12) : Theme.Colors.fill,
+                                            in: RoundedRectangle(cornerRadius: 12))
+                                }.buttonStyle(.plain).accessibilityLabel(icon)
+                            }
+                        }
+                    }
                     VStack(alignment: .leading, spacing: 10) {
                         EyebrowLabel(text: "Дни фокуса")
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 64), spacing: 8)], spacing: 8) {
@@ -150,7 +180,7 @@ struct TagEditSheet: View {
         .presentationBackground(Theme.Colors.background)
         .presentationCornerRadius(Theme.Radius.sheet)
         #else
-        .frame(minWidth: 440, idealWidth: 480, minHeight: 380, idealHeight: 420)
+        .frame(minWidth: 440, idealWidth: 480, minHeight: 600, idealHeight: 690)
         #endif
         .preferredColorScheme(Theme.colorScheme)
         .confirmationDialog("Удалить категорию?", isPresented: $confirmingDelete, titleVisibility: .visible) {
@@ -164,6 +194,7 @@ struct TagEditSheet: View {
         .onAppear {
             if let tag = tagToEdit {
                 name = tag.name
+                selectedIcon = tag.folderIconName
 
                 selectedColorHex = Theme.Colors.normalizedTagHex(tag.colorHex)
                 selectedWeekdays = Set(tag.scheduledDays)
@@ -189,13 +220,14 @@ struct TagEditSheet: View {
         if let tag = tagToEdit {
             tag.name = trimmedName
             tag.colorHex = selectedColorHex
+            tag.iconName = selectedIcon
             tag.scheduledDays = orderedDays
             tag.touch()
         } else {
             let newTag = Tag(
                 name: trimmedName,
                 colorHex: selectedColorHex,
-                iconName: "tag.fill",
+                iconName: selectedIcon,
                 scheduledDays: orderedDays,
                 // New contexts go to the end instead of colliding with the first one at 0
                 sortOrder: (tags.map(\.sortOrder).max() ?? -1) + 1

@@ -1,5 +1,60 @@
 import SwiftUI
 
+struct CaptureFolderPicker: View {
+    let tags: [Tag]
+    @Binding var choice: CaptureFolderChoice
+    @Binding var newName: String
+    var onContinue: () -> Void = {}
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 7) {
+                    chip("Без папки", symbol: "tray", value: .unassigned)
+                    chip("Новая папка", symbol: "folder.badge.plus", value: .newFolder)
+                    ForEach(tags) { tag in
+                        chip(tag.name, symbol: tag.folderIconName, value: .existing(tag.id), tint: tag.color)
+                    }
+                }.padding(.vertical, 2)
+            }
+            if choice == .newFolder {
+                HStack(spacing: 9) {
+                    Image(systemName: "folder.badge.plus").foregroundStyle(Theme.Colors.accent)
+                    TextField("Название папки", text: $newName)
+                        .textFieldStyle(.plain).submitLabel(.next).onSubmit(onContinue)
+                        .accessibilityIdentifier("capture-new-folder-name")
+                }
+                .font(.system(size: 13)).padding(.horizontal, 12).frame(height: 40)
+                .background(Theme.Colors.fill.opacity(0.6), in: RoundedRectangle(cornerRadius: 12))
+                Text("Без названия — назовём папку по задаче.")
+                    .font(.system(size: 10)).foregroundStyle(Theme.Colors.textMuted)
+            }
+        }.foregroundStyle(Theme.Colors.textPrimary)
+    }
+
+    private func chip(_ title: String, symbol: String, value: CaptureFolderChoice, tint: Color? = nil) -> some View {
+        Button {
+            Haptics.selection()
+            withAnimation(reduceMotion ? nil : Theme.Motion.quick) { choice = value }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: symbol).foregroundStyle(
+                    choice == value ? Theme.Colors.onAccent : tint ?? Theme.Colors.textSecondary)
+                Text(title).lineLimit(1)
+                if choice == value { Image(systemName: "checkmark").font(.system(size: 9, weight: .bold)) }
+            }
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(choice == value ? Theme.Colors.onAccent : Theme.Colors.textSecondary)
+            .padding(.horizontal, 11).frame(height: 34)
+            .background(choice == value ? Theme.Colors.accent : Theme.Colors.fill, in: Capsule())
+        }.buttonStyle(.plain).accessibilityAddTraits(choice == value ? .isSelected : [])
+            .accessibilityIdentifier(
+                value == .newFolder
+                    ? "capture-folder-new" : value == .unassigned ? "capture-folder-none" : "capture-folder-" + title)
+    }
+}
+
 // MARK: - Eyebrow Label
 struct EyebrowLabel: View {
     let text: String
@@ -29,7 +84,7 @@ struct SectionTitle: View {
 
     var body: some View {
         HStack(spacing: 7) {
-            Text("// " + text.uppercased())
+            Text(text)
                 .foregroundColor(color)
             if let count {
                 Text("\(count)")
@@ -88,10 +143,16 @@ struct ScopeTab: View {
                         .frame(width: 6, height: 6)
                 }
 
+                #if os(iOS)
+                Text(title)
+                    .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
+                    .lineLimit(1)
+                #else
                 Text(title.uppercased())
                     .font(Theme.Typography.numeric(11, weight: isSelected ? .bold : .medium))
                     .tracking(0.4)
                     .lineLimit(1)
+                #endif
 
                 if let count, count > 0 {
                     Text("\(count)")
@@ -102,6 +163,10 @@ struct ScopeTab: View {
             }
             .foregroundColor(isSelected ? Theme.Colors.onAccent : Theme.Colors.textSecondary)
             .padding(.horizontal, 12)
+            #if os(iOS)
+            .frame(height: 36)
+            .background(Capsule().fill(isSelected ? Theme.Colors.accent : Theme.Colors.fill.opacity(0.55)))
+            #else
             .frame(height: 30)
             .background(
                 Capsule()
@@ -111,6 +176,7 @@ struct ScopeTab: View {
                 Capsule()
                     .strokeBorder(isSelected ? Theme.Colors.accent : Theme.Colors.ruleStrong, lineWidth: 1)
             )
+            #endif
             .fixedSize()
             .contentShape(Capsule())
         }
@@ -202,7 +268,7 @@ struct GroupCard<Content: View>: View {
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
-                .stroke(Theme.Colors.hairline, lineWidth: 1)
+                .stroke(Theme.Colors.borderSubtle, lineWidth: 0.5)
         )
     }
 }
@@ -317,12 +383,29 @@ struct FloatingGlass<S: Shape>: ViewModifier {
 struct ScreenHeading: View {
     let text: String
     var body: some View {
-        Text(text)
+        Text(text.capitalized)
             .font(Theme.Typography.display)
             .tracking(Theme.Typography.displayTracking)
             .foregroundStyle(Theme.Colors.textPrimary)
             .frame(height: 43, alignment: .leading)
-            .padding(.top, 40)
+            .padding(.top, 24)
             .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+struct PageIntro: View {
+    let title: String
+    let subtitle: String
+    var body: some View {
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 7) {
+                Text(title).font(.system(size: 28, weight: .semibold)).tracking(-0.8).foregroundStyle(
+                    Theme.Colors.textPrimary)
+                Text(subtitle).font(.system(size: 12)).foregroundStyle(Theme.Colors.textSecondary)
+            }
+            Spacer(minLength: 0)
+            Image("BrandLogo").resizable().frame(width: 34, height: 34).clipShape(RoundedRectangle(cornerRadius: 10))
+                .accessibilityHidden(true)
+        }.padding(.top, 14).padding(.bottom, 8)
     }
 }

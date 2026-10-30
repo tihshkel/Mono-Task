@@ -33,8 +33,10 @@ struct ScrollGestureTestRoot: View {
             .modelContainer(container)
             .onAppear { AuthManager.shared.activeContainer = container }
             .onDisappear {
+                #if os(iOS)
                 TaskDeletionManager.shared.reset()
                 AuthManager.shared.activeContainer = nil
+                #endif
             }
     }
 }
@@ -125,8 +127,10 @@ struct ScreenshotPreviewRoot: View {
                 #endif
             }
             .onDisappear {
+                #if os(iOS)
                 TaskDeletionManager.shared.reset()
                 AuthManager.shared.activeContainer = nil
+                #endif
             }
     }
 }

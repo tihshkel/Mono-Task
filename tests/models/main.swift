@@ -24,6 +24,9 @@ func run() throws {
         context.insert(tag)
         context.insert(otherTag)
         let task = TaskItem(title: "Persisted", notes: "Notes", isHighPriorityToday: true, tags: [tag])
+        task.dueDate = Date(timeIntervalSince1970: 1_800_000_000)
+        task.reminderMinutesBefore = 120
+        task.reminderSyncPending = true
         context.insert(task)
         let first = SubtaskItem(title: "First", isCompleted: true, sortOrder: 0)
         let second = SubtaskItem(title: "Second", sortOrder: 1)
@@ -36,9 +39,37 @@ func run() throws {
     let container = try ModelContainer(for: schema, configurations: [config])
     let context = ModelContext(container)
     let task = try context.fetch(FetchDescriptor<TaskItem>()).first!
+    check(
+        task.reminderMinutesBefore == 120 && task.reminderSyncPending,
+        "Reminder timing and pending sync survive reopening the store")
+    check(
+        task.scheduledReminderDate == task.dueDate?.addingTimeInterval(-7_200),
+        "Compute the early reminder separately from its deadline")
+    let preservedDeadline = task.dueDate
+    task.reminderMinutesBefore = nil
+    try context.save()
+    check(
+        task.scheduledReminderDate == nil && task.dueDate == preservedDeadline,
+        "Turning reminders off preserves the calendar deadline")
     let tags = try context.fetch(FetchDescriptor<Tag>())
     let work = tags.first { $0.name == "Work" }!
     let personal = tags.first { $0.name == "Personal" }!
+    check(
+        CaptureFolderChoice.existing(work.id).resolve(tags: tags, newName: "", taskTitle: "Task") === work,
+        "Capture assigns the selected folder")
+    check(
+        CaptureFolderChoice.unassigned.resolve(tags: tags, newName: "", taskTitle: "Task") == nil,
+        "Capture can leave a task unassigned")
+    let automatic = CaptureFolderChoice.newFolder.resolve(tags: tags, newName: "", taskTitle: "  New task  ")!
+    check(
+        automatic.name == "New task" && automatic.modelContext == nil,
+        "Automatic folders use the title and remain unsaved until submission")
+    check(
+        CaptureFolderChoice.newFolder.resolve(tags: tags, newName: " work ", taskTitle: "Task") === work,
+        "Reuse a matching folder instead of duplicating it")
+    check(
+        CaptureFolderChoice.newFolder.resolve(tags: tags, newName: "", taskTitle: "   ") == nil,
+        "Empty capture does not create a folder")
     check(task.title == "Persisted" && task.notes == "Notes", "Title and notes survive reopening a disk store")
     check(
         task.tags.first?.id == work.id && work.tasks.contains { $0.id == task.id },

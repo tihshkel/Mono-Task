@@ -17,6 +17,18 @@ struct SharedMember: Codable, Hashable, Identifiable, Sendable {
     var userID: UUID
     var displayName: String
     var id: UUID { userID }
+    var initials: String {
+        Self.initials(for: displayName)
+    }
+    static func initials(for displayName: String) -> String {
+        let name = displayName.split(separator: "@").first.map(String.init) ?? ""
+        let parts = name.split { $0.isWhitespace || $0 == "." || $0 == "_" || $0 == "-" }
+        let letters = parts.prefix(2).compactMap(\.first).map(String.init).joined().uppercased()
+        return letters.isEmpty ? "?" : letters
+    }
+    var avatarColorIndex: Int {
+        userID.uuidString.utf8.reduce(0) { ($0 + Int($1)) % 3 }
+    }
     enum CodingKeys: String, CodingKey {
         case listID = "list_id"
         case userID = "user_id"

@@ -2,10 +2,12 @@ import SwiftUI
 import SwiftData
 
 enum SidebarSelection: Hashable {
+    case workspace
     case list(TaskScope)
     case activity
     case settings
     case shared
+    case islandSettings
 }
 
 #if os(macOS)
@@ -15,7 +17,7 @@ struct MacRootView: View {
     @Query(sort: [SortDescriptor(\TaskItem.sortOrder), SortDescriptor(\TaskItem.createdAt, order: .reverse)]) private
         var allTasks: [TaskItem]
 
-    @State private var selection: SidebarSelection? = .list(.focus)
+    @State private var selection: SidebarSelection? = .workspace
     @State private var showingAddTagSheet: Bool = false
     @State private var editingTag: Tag? = nil
     @State private var tagToDelete: Tag? = nil
@@ -25,7 +27,7 @@ struct MacRootView: View {
     init(initialTab: AppTab = .today) {
         let initial: SidebarSelection =
             switch initialTab {
-            case .today: .list(.focus)
+            case .today: .workspace
             case .activity: .activity
             case .settings: .settings
             }
@@ -89,6 +91,13 @@ struct MacRootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged).receive(on: RunLoop.main)) { _ in
             today = Date.now.startOfDay
         }
+        .onReceive(NotificationCenter.default.publisher(for: .macOpenWorkspace)) { _ in selection = .workspace }
+        .onChange(of: IslandController.shared.settingsRequested, initial: true) { _, requested in
+            if requested {
+                selection = .islandSettings
+                IslandController.shared.settingsRequested = false
+            }
+        }
     }
 
     // MARK: - Sidebar
@@ -96,6 +105,9 @@ struct MacRootView: View {
     private var sidebar: some View {
         List {
             Section {
+                sidebarRow(
+                    .workspace, title: "Пространство", icon: "square.grid.2x2", tint: Theme.Colors.textPrimary,
+                    count: nil)
                 sidebarRow(
                     .list(.focus), title: "Фокус дня", icon: "sun.max", tint: Theme.Colors.accent,
                     count: openCount(.focus))
@@ -106,7 +118,7 @@ struct MacRootView: View {
                     .list(.highPriority), title: "Приоритет", icon: "flame", tint: Theme.Colors.priority,
                     count: openCount(.highPriority))
             } header: {
-                EyebrowLabel(text: "Задачи")
+                EyebrowLabel(text: "Обзор")
             }
 
             Section {
@@ -115,7 +127,7 @@ struct MacRootView: View {
                 }
             } header: {
                 HStack {
-                    EyebrowLabel(text: "Категории")
+                    EyebrowLabel(text: "Мои папки")
                     Spacer()
                     Button {
                         showingAddTagSheet = true
@@ -147,9 +159,16 @@ struct MacRootView: View {
         .listStyle(.sidebar)
         .scrollContentBackground(.hidden)
         .background(Theme.Colors.sidebar)
+        .safeAreaInset(edge: .top) {
+            HStack(spacing: 10) {
+                Image("BrandLogo").resizable().frame(width: 29, height: 29)
+                    .clipShape(RoundedRectangle(cornerRadius: 7))
+                Text("MonoTask").font(.system(size: 18, weight: .semibold)).tracking(-0.6)
+                Spacer()
+            }.foregroundStyle(Theme.Colors.textPrimary).padding(.horizontal, 22).padding(.top, 16).padding(.bottom, 24)
+        }
         .safeAreaInset(edge: .bottom) {
             HStack {
-                SyncIndicator()
                 Spacer()
                 Text(today.formattedEyebrowDate)
                     .font(Theme.Typography.eyebrow)
@@ -187,7 +206,7 @@ struct MacRootView: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 7)
             .contentShape(RoundedRectangle(cornerRadius: 9))
-            .overlay(selectionOutline(for: item))
+            .background(selectionOutline(for: item))
         }
         .buttonStyle(.plain)
         .listRowInsets(EdgeInsets(top: 2, leading: 4, bottom: 2, trailing: 4))
@@ -204,9 +223,9 @@ struct MacRootView: View {
             selection = item
         } label: {
             HStack(spacing: 10) {
-                Circle()
-                    .fill(tag.color)
-                    .frame(width: 8, height: 8)
+                Image(systemName: "folder")
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundStyle(tag.color)
                     .frame(width: 18)
                 Text(tag.name)
                     .font(.system(size: 14))
@@ -232,7 +251,7 @@ struct MacRootView: View {
                     .fill(dropTargetTagId == tag.id ? Theme.Colors.fillStrong : Color.clear)
             )
             .contentShape(RoundedRectangle(cornerRadius: 9))
-            .overlay(selectionOutline(for: item))
+            .background(selectionOutline(for: item))
         }
         .buttonStyle(.plain)
         .listRowInsets(EdgeInsets(top: 2, leading: 4, bottom: 2, trailing: 4))
@@ -263,13 +282,16 @@ struct MacRootView: View {
 
     private func selectionOutline(for item: SidebarSelection) -> some View {
         RoundedRectangle(cornerRadius: 9, style: .continuous)
-            .strokeBorder(selection == item ? Theme.Colors.accent.opacity(0.75) : Color.clear, lineWidth: 1)
+            .fill(selection == item ? Theme.Colors.surface : Color.clear)
+            .shadow(color: .black.opacity(selection == item ? 0.035 : 0), radius: 4, y: 2)
             .allowsHitTesting(false)
     }
 
     @ViewBuilder
     private var detail: some View {
-        switch selection ?? .list(.focus) {
+        switch selection ?? .workspace {
+        case .workspace:
+            WorkspaceView(onOpenScope: { selection = .list($0) })
         case .list(let scope):
             MacTaskListView(scope: scope.validated(tags: tags), today: today)
         case .activity:
@@ -279,6 +301,9 @@ struct MacRootView: View {
             SharedListsView(isEmbedded: true)
         case .settings:
             SettingsView()
+                .padding(.top, 12)
+        case .islandSettings:
+            SettingsView(opensIsland: true)
                 .padding(.top, 12)
         }
     }

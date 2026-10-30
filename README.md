@@ -1,22 +1,23 @@
 <div align="center">
 
-<img src="MonoTask/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" width="96" alt="Иконка MonoTask" />
+<img src="MonoTask/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" width="88" alt="Иконка MonoTask" />
 
 # MonoTask
 
 ### Главное — в фокусе.
 
-Личный менеджер задач для iPhone и Mac.
-Категории, фокус дня и история прогресса — в одном приложении.
+Менеджер задач для iPhone и Mac: день по расписанию, общие списки и прогресс.
 
-![iOS 18+](https://img.shields.io/badge/iOS-18%2B-0B0B0A?style=flat-square&labelColor=1B1B18&color=C8FF2E)
-![macOS 15+](https://img.shields.io/badge/macOS-15%2B-0B0B0A?style=flat-square&labelColor=1B1B18&color=C8FF2E)
-![Swift 6](https://img.shields.io/badge/Swift-6-0B0B0A?style=flat-square&labelColor=1B1B18&color=FF48A4)
-![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-0B0B0A?style=flat-square&labelColor=1B1B18&color=B48CFF)
+[![iOS 18+](https://img.shields.io/badge/iOS-18%2B-221F20?style=flat-square&labelColor=221F20)](https://github.com/egoar777/MonoTask)
+[![macOS 15+](https://img.shields.io/badge/macOS-15%2B-6B57C8?style=flat-square&labelColor=6B57C8)](https://github.com/egoar777/MonoTask)
+[![Swift 6](https://img.shields.io/badge/Swift-6-FF5429?style=flat-square&labelColor=FF5429)](https://github.com/egoar777/MonoTask)
+[![SwiftUI](https://img.shields.io/badge/SwiftUI-221F20?style=flat-square&logo=swift&logoColor=D9FF00&labelColor=221F20)](https://github.com/egoar777/MonoTask)
 
-[Экраны](#экраны) · [Возможности](#возможности) · [Запуск](#сборка) · [Архитектура](docs/ARCHITECTURE.md)
+[Экраны](#экраны) · [Возможности](#возможности) · [Сборка](#сборка) · [Сервер](#свой-сервер) · [Архитектура](docs/ARCHITECTURE.md)
 
 </div>
+
+MonoTask держит в поле зрения одно дело. Категории приходят в фокус по дням недели, личные задачи остаются на устройстве, а общие списки синхронизируются между аккаунтами. Интерфейс собран на SwiftUI, данные — на SwiftData, обмен — через Supabase.
 
 ---
 
@@ -24,93 +25,123 @@
 
 ### iPhone
 
-<p>
-<img src="docs/screenshots/ios-today.png" width="30%" alt="Задачи MonoTask 2.0" />
-<img src="docs/screenshots/ios-analytics.png" width="30%" alt="Аналитика MonoTask 2.0" />
-<img src="docs/screenshots/ios-settings.png" width="30%" alt="Настройки MonoTask 2.0" />
+<p align="center">
+  <img src="docs/screenshots/ios-today.png" width="220" alt="Сегодня: фокус дня и список задач" />
+  &nbsp;
+  <img src="docs/screenshots/ios-analytics.png" width="220" alt="Аналитика: календарь активности" />
+  &nbsp;
+  <img src="docs/screenshots/ios-settings.png" width="220" alt="Настройки: аккаунт и расписание" />
 </p>
 
-Скриншоты из симулятора iPhone с демонстрационными данными. Нажмите на изображение, чтобы открыть в полном размере.
+<p align="center">
+  <sub>Сегодня · Аналитика · Настройки. Снимки из симулятора, данные демонстрационные.</sub>
+</p>
 
 ### Mac
 
-**Задачи и фокус дня, версия 2.0** — боковое меню, категории и быстрый ввод с клавиатуры.
+<table>
+  <tr>
+    <td width="50%">
+      <a href="docs/screenshots/mac-today.jpg"><img src="docs/screenshots/mac-today.jpg" alt="Mac: задачи и фокус дня" /></a>
+      <sub>Задачи и фокус дня. Боковое меню, категории и быстрый ввод.</sub>
+    </td>
+    <td width="50%">
+      <a href="docs/screenshots/mac-activity.jpg"><img src="docs/screenshots/mac-activity.jpg" alt="Mac: аналитика" /></a>
+      <sub>Аналитика. Календарь активности и статистика по категориям.</sub>
+    </td>
+  </tr>
+</table>
 
-[![MonoTask на Mac — задачи и фокус дня](docs/screenshots/mac-today.jpg)](docs/screenshots/mac-today.jpg)
+<p align="center">
+  <a href="docs/screenshots/mac-settings.jpg"><img src="docs/screenshots/mac-settings.jpg" width="720" alt="Mac: настройки" /></a>
+</p>
 
-**Аналитика** — календарь активности и статистика по категориям.
+<p align="center"><sub>Настройки: аккаунт, расписание, уведомления и вид списка.</sub></p>
 
-[![MonoTask на Mac — аналитика](docs/screenshots/mac-activity.jpg)](docs/screenshots/mac-activity.jpg)
+### Общий список
 
-**Настройки** — аккаунт, расписание, уведомления и вид списка.
+<p align="center">
+  <img src="docs/screenshots/ios-shared-list.png" width="280" alt="Общий список с ответственными и подзадачами" />
+</p>
 
-[![MonoTask 2.0 на Mac — настройки](docs/screenshots/mac-settings.jpg)](docs/screenshots/mac-settings.jpg)
+<p align="center"><sub>Участники, ответственные и подзадачи. Личные задачи в этот список не попадают.</sub></p>
 
-Все снимки Mac-версии сделаны в версии 2.0 с демонстрационными данными.
-
-## Версия 2.1
-
-Общие списки для разных аккаунтов: приглашения по ссылке или коду, участники, ответственные, заметки, подзадачи и синхронизация с защитой от конфликтов. Личные задачи остаются приватными. [Совместная работа](docs/SHARED-LISTS.md) · [Изменения](CHANGELOG.md).
-
-<img src="docs/screenshots/ios-shared-list.png" width="320" alt="Общий список MonoTask 2.1 с ответственными и подзадачами" />
+---
 
 ## Возможности
 
-| | Что умеет MonoTask |
+| | |
 | :--- | :--- |
-| **Совместная работа** | Общие списки, приглашения на 72 часа, участники и ответственные. Правки без сети сохраняются в очередь. |
-| **Фокус дня** | Категории появляются в фокусе по расписанию. В любой момент можно открыть общий список. |
-| **Задачи** | Заметки, подзадачи, высокий приоритет и перестановка в списке. |
+| **Фокус дня** | Категории появляются по расписанию. Общий список открывается в любой момент. |
+| **Пространство** | Папки на iPhone и Mac, поиск, сетка и список. Общие списки стоят рядом с личными. |
+| **Задачи** | Заметки, подзадачи, высокий приоритет, срок и порядок в списке. |
 | **Быстрый ввод** | На iPhone «+» раскрывает строку, нажатие на поле открывает клавиатуру. На Mac — строка ввода и `⌘N`. |
-| **Удаление с отменой** | Свайп по задаче и пять секунд, чтобы вернуть её обратно. |
+| **Отмена удаления** | Свайп скрывает задачу на пять секунд. До этого её можно вернуть. |
 | **Прогресс** | История выполнения и календарь активности, общий и по категориям. |
-| **Напоминания** | Уведомления задач и утренний план на выбранные дни. |
-| **Синхронизация** | SwiftData на устройстве, Supabase между устройствами. Можно работать без сети. |
+| **Напоминания** | Уведомление задачи и утренний план на выбранные дни. |
+| **Совместная работа** | Приглашение по ссылке или коду на 72 часа, участники и ответственные. Правки без сети остаются в очереди. [Подробнее](docs/SHARED-LISTS.md). |
+| **Синхронизация** | SwiftData на устройстве, Supabase между устройствами. У каждого аккаунта своё хранилище. |
+| **Островок на Mac** | Текущая задача и таймер остаются у камеры, пока основное окно свёрнуто. [Как устроено](docs/WORKSPACE.md). |
 
-На iPhone — плавающая панель с Liquid Glass на iOS 26+ и материалом на iOS 18–25; на Mac — боковое меню. `⌘R` запускает синхронизацию. У каждого аккаунта отдельное локальное хранилище.
+На iPhone навигация плавает: Liquid Glass на iOS 26+ и материал на iOS 18–25. На Mac разделы собраны в боковом меню. `⌘R` запускает синхронизацию.
+
+| Сочетание | Действие |
+| :--- | :--- |
+| `⌘N` | Новая задача |
+| `⌘R` | Синхронизация |
+| `⌘⌥I` | Раскрыть островок |
+| `⌘⌥N` | Быстрый ввод в островке |
+
+Сочетания островка действуют, пока MonoTask запущен. Это команды приложения, не системные горячие клавиши.
+
+Текущая версия — **2.1.1**. Список изменений: [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
 ## Сборка
 
-Требуются macOS, Xcode 26 или новее и подключение к сети для первоначальной загрузки зависимостей. Поддерживаются iOS 18+ и macOS 15+.
+Нужны macOS, Xcode 26 или новее и сеть для первой загрузки пакетов. Приложение собирается для iOS 18+ и macOS 15+.
 
-1. Откройте `MonoTask.xcodeproj` и дождитесь загрузки Swift Package Manager.
-2. Выберите схему `MonoTask` и нужное устройство или симулятор.
-3. Для физического устройства укажите свою Team в Signing & Capabilities. При необходимости замените Bundle Identifier на уникальный.
+1. Откройте `MonoTask.xcodeproj` и дождитесь Swift Package Manager.
+2. Выберите схему `MonoTask` и устройство или симулятор.
+3. Для физического устройства укажите свою Team в Signing & Capabilities. При необходимости замените Bundle Identifier.
 4. Запустите приложение и войдите в аккаунт или зарегистрируйтесь.
 
-Проект можно пересоздать из `project.yml` с помощью XcodeGen:
+Проект можно собрать заново из `project.yml`:
 
 ```sh
 xcodegen generate
 ```
 
-## Supabase
+---
 
-В `MonoTask/Resources/SupabaseConfig.plist` находятся публичные клиентские параметры. Они не дают административного доступа: записи защищены авторизацией и RLS.
+## Свой сервер
 
-Для собственного сервера:
+В `MonoTask/Resources/SupabaseConfig.plist` лежат публичные клиентские параметры. Они не дают административного доступа: записи закрыты авторизацией и RLS.
 
-1. Выполните `docs/supabase_schema.sql`, затем `docs/migrations/20261028_shared_lists.sql` в SQL Editor своего проекта Supabase.
-2. Разрешите Data API доступ к восьми таблицам `monotask_*`.
-3. Добавьте `com.monotask.ios://auth-callback` в разрешённые Redirect URLs.
-4. Включите Email в Authentication. Для подтверждения адресов и восстановления паролей настройте SMTP.
-5. Укажите URL проекта и публичный ключ в `SupabaseConfig.plist`.
+1. Выполните в SQL Editor `docs/supabase_schema.sql`, затем `docs/migrations/20261028_shared_lists.sql` и `docs/migrations/20261030_task_deadline_reminders.sql`.
+2. Разрешите Data API для восьми таблиц `monotask_*`.
+3. Добавьте `com.monotask.ios://auth-callback` в Redirect URLs.
+4. Включите Email в Authentication. Для писем подтверждения и восстановления пароля настройте SMTP.
+5. Запишите URL проекта и публичный ключ в `SupabaseConfig.plist`.
 
-Для локальной разработки параметры можно переопределить переменными окружения `SUPABASE_URL` и `SUPABASE_ANON_KEY`. Поддерживается файл `.env` по образцу `.env.example`. Локальные настройки исключены из Git. Ключ `service_role`, пароль базы и приватные ключи в клиентское приложение не добавляются.
+Для локальной разработки те же значения можно задать через `SUPABASE_URL` и `SUPABASE_ANON_KEY` или файл `.env` по образцу `.env.example`. Локальные настройки не попадают в Git. Ключ `service_role`, пароль базы и приватные ключи в клиент не добавляются.
+
+---
 
 ## Структура
 
-- `Models` — модели SwiftData и фильтры задач.
-- `Views` — экраны iPhone и Mac, формы и общие компоненты.
-- `Services` — авторизация, синхронизация, уведомления и состояние сети.
-- `Extensions` — операции с данными, датами, цветами и обратной связью.
-- `PreviewContent` — тестовые данные для Debug-сборки симулятора.
-- `Resources` — шрифты, изображения и настройки приложения.
+| Каталог | Что внутри |
+| :--- | :--- |
+| `Models` | Модели SwiftData и фильтры задач |
+| `Views` | Экраны iPhone и Mac, формы и общие компоненты |
+| `Services` | Авторизация, синхронизация, уведомления и сеть |
+| `Extensions` | Операции с данными, датами, цветами и обратной связью |
+| `PreviewContent` | Демонстрационные данные для Debug-сборки |
+| `Resources` | Шрифты, изображения и настройки |
 
-Подробности хранения и синхронизации: [архитектура](docs/ARCHITECTURE.md). Команды проверок: [tests/README.md](tests/README.md).
+Хранение и обмен: [архитектура](docs/ARCHITECTURE.md). Проверки: [tests/README.md](tests/README.md).
 
 ## Шрифты
 
-В приложении используются Unbounded и JetBrains Mono. Оба распространяются по SIL Open Font License; тексты лицензий находятся в `MonoTask/Resources/Fonts`.
+В интерфейсе используются Unbounded и JetBrains Mono. Оба шрифта распространяются по SIL Open Font License. Тексты лицензий лежат в `MonoTask/Resources/Fonts`.

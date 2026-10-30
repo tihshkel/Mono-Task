@@ -21,10 +21,12 @@ struct TodayView: View {
     @State private var today: Date = Date.now.startOfDay
 
     init(
+        initialScope: TaskScope = .focus,
         isCaptureActive: Binding<Bool> = .constant(false), captureTag: Binding<Tag?> = .constant(nil)
     ) {
         self._isCaptureActive = isCaptureActive
         self._captureTag = captureTag
+        self._scope = State(initialValue: initialScope)
     }
 
     private var scheduledTags: [Tag] {
@@ -128,7 +130,7 @@ struct TodayView: View {
                     .scrollBounceBehavior(.always, axes: .vertical)
                     .scrollDismissesKeyboard(.interactively)
                     #if os(iOS)
-                    .contentMargins(.bottom, isCaptureActive ? 0 : 88, for: .scrollContent)
+                    .contentMargins(.bottom, 16, for: .scrollContent)
                     #endif
                     .monoScrollEdge()
                     .onChange(of: scope) { _, _ in

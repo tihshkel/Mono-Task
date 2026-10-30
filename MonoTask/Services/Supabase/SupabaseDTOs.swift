@@ -73,6 +73,8 @@ struct TaskItemDTO: Codable, Identifiable, Sendable {
     let createdAt: Date
     let completedAt: Date?
     let dueDate: Date?
+    let reminderMinutesBefore: Int?
+    var includesReminderTiming = true
     let sortOrder: Int
     let tagIds: [UUID]
     let updatedAt: Date
@@ -88,6 +90,7 @@ struct TaskItemDTO: Codable, Identifiable, Sendable {
         case createdAt = "created_at"
         case completedAt = "completed_at"
         case dueDate = "due_date"
+        case reminderMinutesBefore = "reminder_minutes_before"
         case sortOrder = "sort_order"
         case tagIds = "tag_ids"
         case updatedAt = "updated_at"
@@ -104,6 +107,7 @@ struct TaskItemDTO: Codable, Identifiable, Sendable {
         createdAt: Date = Date.now,
         completedAt: Date? = nil,
         dueDate: Date? = nil,
+        reminderMinutesBefore: Int? = 0,
         sortOrder: Int = 0,
         tagIds: [UUID] = [],
         updatedAt: Date = Date.now,
@@ -118,6 +122,7 @@ struct TaskItemDTO: Codable, Identifiable, Sendable {
         self.createdAt = createdAt
         self.completedAt = completedAt
         self.dueDate = dueDate
+        self.reminderMinutesBefore = reminderMinutesBefore
         self.sortOrder = sortOrder
         self.tagIds = tagIds
         self.updatedAt = updatedAt
@@ -135,11 +140,35 @@ struct TaskItemDTO: Codable, Identifiable, Sendable {
         self.createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date.now
         self.completedAt = try container.decodeIfPresent(Date.self, forKey: .completedAt)
         self.dueDate = try container.decodeIfPresent(Date.self, forKey: .dueDate)
+        includesReminderTiming = container.contains(.reminderMinutesBefore)
+        self.reminderMinutesBefore =
+            includesReminderTiming
+            ? try container.decodeIfPresent(Int.self, forKey: .reminderMinutesBefore) : 0
         self.sortOrder = try container.decodeIfPresent(Int.self, forKey: .sortOrder) ?? 0
         self.tagIds = try container.decodeIfPresent([UUID].self, forKey: .tagIds) ?? []
         self.updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date.now
         self.deletedAt = try container.decodeIfPresent(Date.self, forKey: .deletedAt)
     }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(title, forKey: .title)
+        try container.encode(notes, forKey: .notes)
+        try container.encode(bucketRaw, forKey: .bucketRaw)
+        try container.encode(priorityRaw, forKey: .priorityRaw)
+        try container.encode(isHighPriorityToday, forKey: .isHighPriorityToday)
+        try container.encode(createdAt, forKey: .createdAt)
+        // Explicit nulls clear removed deadlines/reminders on other devices.
+        try container.encode(completedAt, forKey: .completedAt)
+        try container.encode(dueDate, forKey: .dueDate)
+        if includesReminderTiming { try container.encode(reminderMinutesBefore, forKey: .reminderMinutesBefore) }
+        try container.encode(sortOrder, forKey: .sortOrder)
+        try container.encode(tagIds, forKey: .tagIds)
+        try container.encode(updatedAt, forKey: .updatedAt)
+        try container.encode(deletedAt, forKey: .deletedAt)
+    }
+
 }
 
 // MARK: - Subtask Item DTO

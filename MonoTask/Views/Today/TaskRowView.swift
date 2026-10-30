@@ -202,7 +202,7 @@ struct TaskRowView: View {
     private var metaRow: some View {
         HStack(spacing: 10) {
             if let date = task.dueDate, !isDone {
-                Label(date.formattedDateTime, systemImage: "bell")
+                Label(date.formattedDateTime, systemImage: "calendar")
                     .lineLimit(1)
                     .font(Theme.Typography.caption)
                     .foregroundColor(date > .now ? Theme.Colors.accent : Theme.Colors.textMuted)

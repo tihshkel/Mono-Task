@@ -27,6 +27,9 @@ struct FocusHeroCard: View {
     }
 
     var body: some View {
+        #if os(iOS)
+        mobileBody
+        #else
         VStack(alignment: .leading, spacing: 0) {
 
             HStack(spacing: 8) {
@@ -37,7 +40,7 @@ struct FocusHeroCard: View {
             .padding(.top, 8)
             .fixedSize(horizontal: false, vertical: true)
 
-            Text(title.uppercased())
+            Text(title)
                 .contentTransition(.opacity)
                 .font(Theme.Typography.display)
                 .tracking(Theme.Typography.displayTracking)
@@ -58,7 +61,7 @@ struct FocusHeroCard: View {
                             .foregroundColor(Theme.Colors.accent)
                             .contentTransition(.numericText())
                             .accessibilityIdentifier("focus-completion-count")
-                        Text("/ \(totalCount) ГОТОВО")
+                        Text("/ \(totalCount) готово")
                             .font(Theme.Typography.numeric(13))
                             .foregroundColor(Theme.Colors.textMuted)
 
@@ -83,41 +86,93 @@ struct FocusHeroCard: View {
             .clipped()
             .accessibilityHidden(compact)
 
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        pill(.focus, title: "Фокус", color: nil)
-                        pill(.all, title: "Все", color: nil)
-                        ForEach(tags) { tag in
-                            pill(.tag(tag.id), title: tag.name, color: tag.color)
-                        }
-                        Button {
-                            SharedListStore.shared.isPresented = true
-                        } label: {
-                            Label("Общие", systemImage: "person.2")
-                                .font(Theme.Typography.numeric(12))
-                                .padding(.horizontal, 14).frame(minHeight: 36)
-                                .foregroundStyle(Theme.Colors.textSecondary)
-                                .background(Theme.Colors.fill, in: Capsule())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("open-shared-lists")
-                    }
-                    .padding(.horizontal, Theme.Spacing.screenPadding)
-                    .padding(.vertical, 16)
-                }
-                .padding(.horizontal, -Theme.Spacing.screenPadding)
-                .onChange(of: scope) { _, newScope in
-                    withAnimation(reduceMotion ? nil : Theme.Motion.standard) {
-                        proxy.scrollTo(pillId(newScope), anchor: .center)
-                    }
-                }
-            }
+            scopePicker
         }
         .padding(.horizontal, Theme.Spacing.screenPadding)
         .background(Theme.Colors.background)
         .animation(reduceMotion ? nil : Theme.Motion.standard, value: doneCount)
         .animation(reduceMotion ? nil : collapseAnimation, value: compact)
+        #endif
+    }
+
+    #if os(iOS)
+    private var mobileBody: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 14) {
+                if !compact {
+                    HStack {
+                        Text(today.formattedEyebrowDate).font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                        Spacer()
+                        SyncIndicator()
+                    }
+                }
+                HStack(alignment: .center, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(title).font(.system(size: compact ? 22 : 26, weight: .semibold)).tracking(-0.7)
+                            .foregroundStyle(Theme.Colors.textPrimary).lineLimit(1).minimumScaleFactor(0.75)
+                            .contentTransition(.opacity)
+                        if let subtitle, !compact {
+                            Text(subtitle).font(.system(size: 12)).foregroundStyle(Theme.Colors.textSecondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                    if !compact {
+                        VStack(alignment: .trailing, spacing: 3) {
+                            Text("\(doneCount) / \(totalCount)")
+                                .font(.system(size: 22, weight: .medium, design: .rounded))
+                                .foregroundStyle(Theme.Colors.accent).contentTransition(.numericText())
+                                .accessibilityIdentifier("focus-completion-count")
+                            Text("выполнено").font(.system(size: 10)).foregroundStyle(Theme.Colors.textSecondary)
+                        }
+                    }
+                }
+                if !compact { ProgressLine(progress: progress, height: 3) }
+            }
+            .padding(18)
+            .background(Theme.Colors.surface, in: RoundedRectangle(cornerRadius: 22))
+            .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(Theme.Colors.borderSubtle, lineWidth: 0.5))
+            scopePicker
+        }
+        .padding(.horizontal, Theme.Spacing.screenPadding).padding(.top, 6)
+        .background(Theme.Colors.background)
+        .animation(reduceMotion ? nil : Theme.Motion.standard, value: doneCount)
+        .animation(reduceMotion ? nil : collapseAnimation, value: compact)
+    }
+    #endif
+
+    private var scopePicker: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    pill(.focus, title: "Фокус", color: nil)
+                    pill(.all, title: "Все", color: nil)
+                    ForEach(tags) { tag in
+                        pill(.tag(tag.id), title: tag.name, color: tag.color)
+                    }
+                    Button {
+                        SharedListStore.shared.isPresented = true
+                    } label: {
+                        Label("Общие", systemImage: "person.2")
+                            .font(Theme.Typography.numeric(12))
+                            .padding(.horizontal, 14).frame(minHeight: 36)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                            .background(Theme.Colors.fill, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("open-shared-lists")
+                }
+                .padding(.horizontal, Theme.Spacing.screenPadding)
+                .padding(.vertical, 16)
+            }
+            .padding(.horizontal, -Theme.Spacing.screenPadding)
+            .onChange(of: scope) { _, newScope in
+                withAnimation(reduceMotion ? nil : Theme.Motion.standard) {
+                    proxy.scrollTo(pillId(newScope), anchor: .center)
+                }
+            }
+        }
     }
 
     private func pill(_ pillScope: TaskScope, title: String, color: Color?) -> some View {
@@ -312,6 +367,6 @@ struct SyncDetailsView: View {
             .disabled(!canSync)
         }
         .foregroundStyle(Theme.Colors.textPrimary)
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(Theme.colorScheme)
     }
 }

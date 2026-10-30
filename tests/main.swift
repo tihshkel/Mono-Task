@@ -77,6 +77,32 @@ p.taskReminders = false
 check(plans().count == 14, "Morning plan has a bounded 14-day horizon")
 p.morningHour = 7
 check(plans().count == 13, "Do not schedule a morning plan in the past today")
+p.morningPlan = false
+p.taskReminders = true
+p.showPreview = true
+func earlyPlans(_ lead: Int?, due: Date = now.addingTimeInterval(7_200)) -> [PlannedNotification] {
+    let task = ReminderTask(
+        id: first, title: "Дедлайн", date: due, done: false, priority: false, tagIDs: [], order: 0, minutesBefore: lead)
+    return NotificationPlanner.plans(tasks: [task], tags: [], preferences: p, now: now, calendar: calendar)
+}
+check(
+    earlyPlans(60).first?.date == now.addingTimeInterval(3_600),
+    "Notify an hour before the deadline, not at the deadline")
+check(earlyPlans(0).first?.date == now.addingTimeInterval(7_200), "Zero preserves at-deadline behavior")
+check(earlyPlans(nil).isEmpty, "A deadline can exist without a notification")
+check(earlyPlans(180).isEmpty, "Never move an elapsed early reminder to the deadline")
+check(earlyPlans(120).isEmpty, "Do not schedule a reminder exactly at now")
+check(earlyPlans(-1).isEmpty && earlyPlans(525_601).isEmpty, "Reject invalid imported offsets")
+check(
+    earlyPlans(60).first?.identifier == earlyPlans(30).first?.identifier,
+    "Rescheduling replaces the same task notification")
+check(earlyPlans(60).first?.body.contains("1 ч.") == true, "Explain the remaining time")
+let winterDeadline = date("2026-10-25T02:30:00Z")
+check(
+    earlyPlans(120, due: winterDeadline).first?.date == winterDeadline.addingTimeInterval(-7_200),
+    "An elapsed-time lead remains two hours across DST")
+p.showPreview = false
+check(earlyPlans(60).first?.body.contains("Дедлайн") == false, "Privacy also hides deadline task titles")
 p.enabled = false
 check(plans().isEmpty, "Disabling after configuration clears both kinds")
 print("Passed \(checks) notification planner checks")

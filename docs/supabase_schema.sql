@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS public.monotask_tasks (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     completed_at TIMESTAMPTZ DEFAULT NULL,
     due_date TIMESTAMPTZ DEFAULT NULL,
+    reminder_minutes_before INTEGER DEFAULT 0 CHECK (reminder_minutes_before BETWEEN 0 AND 525600),
     sort_order INTEGER NOT NULL DEFAULT 0,
     tag_ids UUID[] NOT NULL DEFAULT '{}',
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),

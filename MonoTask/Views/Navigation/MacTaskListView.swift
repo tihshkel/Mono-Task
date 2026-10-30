@@ -12,6 +12,8 @@ struct MacTaskListView: View {
     let scope: TaskScope
     let today: Date
 
+    @AppStorage("monotask_task_layout") private var taskLayout = "list"
+    @State private var search = ""
     @State private var taskTitle: String = ""
     @State private var isHighPriority: Bool = false
     @State private var taskToEdit: TaskItem? = nil
@@ -40,6 +42,7 @@ struct MacTaskListView: View {
     private var filteredTasks: [TaskItem] {
         scope.filter(allTasks, scheduledTags: scheduledTags)
             .filter { !TaskDeletionManager.shared.isPending($0) }
+            .filter { search.isEmpty || $0.title.localizedCaseInsensitiveContains(search) }
     }
 
     private var highPriorityTasks: [TaskItem] {
@@ -96,6 +99,19 @@ struct MacTaskListView: View {
         .background(Theme.Colors.background.ignoresSafeArea())
         .navigationTitle(scope.title(tags: tags))
         .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button {
+                    NotificationCenter.default.post(name: .macOpenWorkspace, object: nil)
+                } label: {
+                    Label("Пространство", systemImage: "chevron.left")
+                }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Picker("Вид задач", selection: $taskLayout) {
+                    Image(systemName: "list.bullet").tag("list")
+                    Image(systemName: "square.grid.2x2").tag("cards")
+                }.pickerStyle(.segmented).frame(width: 86)
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     NotificationCenter.default.post(name: .macTriggerSync, object: nil)
@@ -118,62 +134,32 @@ struct MacTaskListView: View {
     // MARK: - Header
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                EyebrowLabel(text: today.formattedEyebrowDate)
+        VStack(alignment: .leading, spacing: 22) {
+            HStack(spacing: 22) {
+                if let tag = activeTag, isTagScope {
+                    FolderArtwork(tint: tag.color, icon: tag.folderIconName)
+                        .frame(width: 115, height: 90)
+                } else {
+                    Image(systemName: scope == .focus ? "sun.max" : "tray")
+                        .font(.system(size: 30, weight: .ultraLight)).foregroundStyle(Theme.Colors.accent)
+                        .frame(width: 70, height: 70)
+                        .background(Theme.Colors.surface, in: RoundedRectangle(cornerRadius: 22))
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(headerTitle).font(.system(size: 32, weight: .semibold)).tracking(-1)
+                        .foregroundStyle(Theme.Colors.textPrimary)
+                    Text(headerSubtitle ?? "Всё, что важно, в одном месте.")
+                        .font(.system(size: 12)).foregroundStyle(Theme.Colors.textSecondary)
+                    Text("\(completedTasks.count) из \(filteredTasks.count) выполнено")
+                        .font(.system(size: 11)).foregroundStyle(Theme.Colors.textMuted)
+                }
                 Spacer()
-                if !completedTasks.isEmpty {
-                    Button {
-                        showingClearCompleted = true
-                    } label: {
-                        Text("ОЧИСТИТЬ ВЫПОЛНЕННЫЕ")
-                            .font(Theme.Typography.numeric(10, weight: .medium))
-                            .tracking(0.6)
-                            .foregroundColor(Theme.Colors.textSecondary)
-                            .padding(.horizontal, 10)
-                            .frame(height: 24)
-                            .overlay(Capsule().strokeBorder(Theme.Colors.ruleStrong, lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                }
             }
-
-            HStack(alignment: .center, spacing: 14) {
-                if case .tag = scope {
-                    Circle()
-                        .fill(scopeColor)
-                        .frame(width: 12, height: 12)
-                }
-                Text(headerTitle.uppercased())
-                    .font(Theme.Typography.displayLarge)
-                    .tracking(Theme.Typography.displayTracking)
-                    .foregroundColor(Theme.Colors.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-            }
-            .padding(.top, 16)
-
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("\(completedTasks.count)")
-                    .font(Theme.Typography.figure(40))
-                    .foregroundColor(Theme.Colors.accent)
-                    .contentTransition(.numericText())
-                Text("/ \(filteredTasks.count) ГОТОВО")
-                    .font(Theme.Typography.numeric(13))
-                    .foregroundColor(Theme.Colors.textMuted)
-                if let headerSubtitle {
-                    Spacer()
-                    Text(headerSubtitle.uppercased())
-                        .font(Theme.Typography.eyebrow)
-                        .tracking(Theme.Typography.eyebrowTracking)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                        .lineLimit(1)
-                }
-            }
-            .padding(.top, 4)
-
-            ProgressLine(progress: progress)
-                .padding(.top, 14)
+            HStack {
+                TextField("Найти задачу в папке", text: $search).textFieldStyle(.plain).font(.system(size: 12))
+                Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundStyle(Theme.Colors.textMuted)
+            }.padding(12).background(Theme.Colors.fill, in: RoundedRectangle(cornerRadius: 12))
+            ProgressLine(progress: progress, height: 3)
         }
     }
 
@@ -188,7 +174,7 @@ struct MacTaskListView: View {
             return scheduledTags.map(\.name).joined(separator: " · ")
         case .all: return "Все категории"
         case .highPriority: return "Только срочное"
-        case .tag: return "Одна категория"
+        case .tag: return "Отдельное место для ваших дел."
         }
     }
 
@@ -246,15 +232,28 @@ struct MacTaskListView: View {
     // MARK: - Sections
 
     private func section(title: String, tasks: [TaskItem], color: Color, highPriority: Bool?) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 12) {
             SectionTitle(text: title, count: tasks.count, color: color)
-                .padding(.bottom, 6)
-
-            Hairline()
-
-            ForEach(tasks) { task in
-                row(task, highPriority: highPriority)
-                Hairline()
+            if taskLayout == "cards" {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 14)], spacing: 14) {
+                    ForEach(tasks) { task in
+                        MacWorkspaceTaskCard(
+                            task: task, allTags: tags, onEdit: { taskToEdit = task },
+                            onComplete: { toggleTaskDone(task) }
+                        )
+                        .dropDestination(for: String.self) { items, _ in
+                            guard let value = items.first, let id = UUID(uuidString: value) else { return false }
+                            modelContext.reorderTask(id, onto: task.id, in: allTasks, highPriority: highPriority)
+                            return true
+                        }
+                    }
+                }
+            } else {
+                ForEach(tasks) { task in
+                    row(task, highPriority: highPriority)
+                        .padding(.horizontal, 14).padding(.vertical, 4)
+                        .background(Theme.Colors.surface, in: RoundedRectangle(cornerRadius: 15))
+                }
             }
         }
     }
@@ -456,8 +455,66 @@ struct MacTaskRowItem: View {
                 .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous))
         }
         .contextMenu {
+            if !task.isDone {
+                Button {
+                    IslandController.shared.pin(task)
+                } label: {
+                    Label("В MonoTask Island", systemImage: "capsule")
+                }
+                .disabled(!IslandController.shared.preferences.enabled)
+                Divider()
+            }
             TaskContextMenu(task: task, allTags: allTags, onEdit: onEdit, onToggleDone: onToggleDone)
         }
+    }
+}
+private struct MacWorkspaceTaskCard: View {
+    @Bindable var task: TaskItem
+    let allTags: [Tag]
+    let onEdit: () -> Void
+    let onComplete: () -> Void
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Button(action: onComplete) {
+                    TaskCheckbox(isDone: task.isDone, isPriority: task.isHighPriorityToday, size: 19)
+                }
+                .buttonStyle(.plain).accessibilityLabel("Завершить \(task.title)")
+                Spacer()
+                if task.isHighPriorityToday {
+                    Image(systemName: "flag.fill").font(.system(size: 10)).foregroundStyle(Theme.Colors.priority)
+                }
+                Menu {
+                    TaskContextMenu(task: task, allTags: allTags, onEdit: { _ in onEdit() }, onToggleDone: onComplete)
+                    Button("В MonoTask Island") { IslandController.shared.pin(task) }
+                } label: {
+                    Image(systemName: "ellipsis").foregroundStyle(Theme.Colors.textMuted)
+                }
+                .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+            }
+            Button(action: onEdit) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(task.title).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.Colors.textPrimary)
+                        .lineLimit(2)
+                    if !task.notes.isEmpty {
+                        Text(task.notes).font(.system(size: 11)).foregroundStyle(Theme.Colors.textSecondary).lineLimit(
+                            2)
+                    }
+                }.frame(maxWidth: .infinity, minHeight: 52, alignment: .topLeading).contentShape(Rectangle())
+            }.buttonStyle(.plain)
+            HStack(spacing: 5) {
+                if let tag = task.tags.first {
+                    Image(systemName: "folder.fill").foregroundStyle(tag.color)
+                    Text(tag.name)
+                }
+                Spacer()
+                if task.hasSubtasks { Text("\(task.completedSubtasksCount)/\(task.subtasksCount)") }
+                if let due = task.dueDate { Text(due, format: .dateTime.day().month(.abbreviated)) }
+            }.font(.system(size: 10)).foregroundStyle(Theme.Colors.textMuted)
+        }.padding(18).frame(maxWidth: .infinity, minHeight: 160, alignment: .topLeading)
+            .background(Theme.Colors.surface, in: RoundedRectangle(cornerRadius: 20))
+            .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Theme.Colors.borderSubtle, lineWidth: 0.7))
+            .draggable(task.id.uuidString)
     }
 }
 #endif

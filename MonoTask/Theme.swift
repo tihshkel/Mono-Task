@@ -1,7 +1,42 @@
 import SwiftUI
 import CoreText
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 enum Theme {
-    static let colorScheme: ColorScheme = .dark
+    static var colorScheme: ColorScheme? {
+        switch UserDefaults.standard.string(forKey: "monotask_appearance") ?? "light" {
+        case "dark": return .dark
+        case "system": return nil
+        default: return .light
+        }
+    }
+
+    private static func adaptive(_ light: String, _ dark: String) -> Color {
+        #if os(macOS)
+        return Color(
+            nsColor: NSColor(name: nil) { appearance in
+                let hex = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? dark : light
+                let value = UInt32(hex.dropFirst(), radix: 16) ?? 0
+                return NSColor(
+                    srgbRed: Double((value >> 16) & 255) / 255,
+                    green: Double((value >> 8) & 255) / 255,
+                    blue: Double(value & 255) / 255, alpha: 1)
+            })
+        #else
+        return Color(
+            uiColor: UIColor { traits in
+                let hex = traits.userInterfaceStyle == .dark ? dark : light
+                let value = UInt32(hex.dropFirst(), radix: 16) ?? 0
+                return UIColor(
+                    red: Double((value >> 16) & 255) / 255,
+                    green: Double((value >> 8) & 255) / 255,
+                    blue: Double(value & 255) / 255, alpha: 1)
+            })
+        #endif
+    }
     static func registerFonts() {
         let urls = Bundle.main.urls(forResourcesWithExtension: "ttf", subdirectory: nil) ?? []
         for url in urls {
@@ -12,93 +47,78 @@ enum Theme {
     // MARK: - Colors
     enum Colors {
         // Surfaces, darkest to lightest
-        static let background = Color(hex: "#0B0B0A")
-        static let sidebar = Color(hex: "#111110")
-        static let surface = Color(hex: "#141412")
-        static let surfaceElevated = Color(hex: "#1B1B18")
-        static let surfaceInteractive = Color(hex: "#262622")
+        static let sunGlare = Color(hex: "#D9FF00")
+        static let exuberantOrange = Color(hex: "#FF5429")
+        static let blueViolet = Color(hex: "#6B57C8")
+        static let cloudDancer = Color(hex: "#F2EFEB")
+        static let darkestHour = Color(hex: "#221F20")
+        static let background = adaptive("#F2EFEB", "#221F20")
+        static let sidebar = adaptive("#EAE5E1", "#282426")
+        static let surface = adaptive("#FCFAF7", "#2C282C")
+        static let surfaceElevated = adaptive("#FFFDFA", "#353035")
+        static let surfaceInteractive = adaptive("#E9E2EF", "#433A48")
         static let tabBarBackground = background
 
         // Translucent fills for chips and controls on any surface
-        static let fill = Color.white.opacity(0.05)
-        static let fillStrong = Color.white.opacity(0.09)
+        static let fill = adaptive("#EDE7E3", "#363035")
+        static let fillStrong = adaptive("#E2DAD7", "#463D45")
 
         // Rules
-        static let hairline = Color(hex: "#222220")
-        static let ruleStrong = Color(hex: "#3A3A35")
-        static let border = Color.white.opacity(0.12)
-        static let borderSubtle = Color.white.opacity(0.07)
+        static let hairline = adaptive("#E6DFDA", "#3E363D")
+        static let ruleStrong = adaptive("#D1C7CD", "#5C505C")
+        static let border = adaptive("#DBD1D7", "#504550")
+        static let borderSubtle = adaptive("#E9E1DE", "#3B333B")
 
         // Text
-        static let textPrimary = Color(hex: "#F2F2EC")
-        static let textSecondary = Color(hex: "#A3A39A")
-        static let textMuted = Color(hex: "#6F6F66")
+        static let textPrimary = adaptive("#221F20", "#F2EFEB")
+        static let textSecondary = adaptive("#746B74", "#BDB2BD")
+        static let textMuted = adaptive("#827783", "#A799A7")
         static let textTertiary = textMuted
-        static let accent = Color(hex: "#C8FF2E")
+        // Violet keeps small text readable on cream; lime lights up dark surfaces.
+        static let accent = adaptive("#6550B8", "#D9FF00")
         static let primary = accent
         static let primaryMuted = accent.opacity(0.14)
-        static let onAccent = Color(hex: "#0B0B0A")
+        static let onAccent = adaptive("#FCFAF7", "#221F20")
         static let inverse = accent
         static let onInverse = onAccent
-        static let priority = Color(hex: "#FF48A4")
-        static let info = textSecondary
+        static let priority = adaptive("#B83A1B", "#FF7959")
+        static let info = adaptive("#6550B8", "#B7A4FF")
 
         static let success = accent
         static let accentGreen = accent
         static let successMuted = accent.opacity(0.14)
 
-        static let warning = Color(hex: "#FFB020")
+        static let warning = priority
         static let warningMuted = warning.opacity(0.14)
 
-        static let danger = Color(hex: "#FF4D4F")
+        static let danger = adaptive("#BD341C", "#FF8466")
         static let dangerMuted = danger.opacity(0.14)
         static let tagColors: [String] = [
-            "#5AA9FF",  // Blue
-            "#B48CFF",  // Violet
-            "#3DDC97",  // Green
-            "#FFB547",  // Amber
-            "#FF6B5B",  // Red
-            "#FF8AC6",  // Rose
-            "#7C83FF",  // Indigo
-            "#4FD8E8",  // Teal
+            "#FF5429",  // Exuberant Orange
+            "#6B57C8",  // Blue Violet
+            "#D9FF00",  // Sun Glare
+            "#B397ED",  // Soft violet
+            "#D95D37",  // Clay orange
+            "#946BC9",  // Orchid violet
+            "#A7BD19",  // Deep lime
+            "#CB8575",  // Muted orange
         ]
         // Legacy colours stay compatible with existing databases.
         private static let previousTagPalettes: [[String]] = [
+            ["#8BA9D7", "#B4A0D7", "#8CB8A5", "#E1B86C", "#D3988A", "#D8A9C0", "#9DA9CD", "#85B8BD"],
+            ["#5AA9FF", "#B48CFF", "#3DDC97", "#FFB547", "#FF6B5B", "#FF8AC6", "#7C83FF", "#4FD8E8"],
             ["#0A84FF", "#BF5AF2", "#30D158", "#FF9F0A", "#FF453A", "#FF375F", "#5E5CE6", "#40C8E0"],
             ["#2F5DA8", "#7A4FB5", "#3F8F5A", "#D98A1E", "#D2452B", "#C9577F", "#4B57C2", "#2A8C8C"],
         ]
         // Keep stored category colours legible against dark surfaces.
         static func tagColor(_ hex: String) -> Color {
-            let normalized = normalizedTagHex(hex)
-            var cleaned = normalized.trimmingCharacters(in: .whitespacesAndNewlines)
-            if cleaned.hasPrefix("#") { cleaned.removeFirst() }
-            guard cleaned.count == 6, let value = UInt32(cleaned, radix: 16) else {
-                return Color(hex: normalized)
-            }
-
-            let r = Double((value >> 16) & 0xFF) / 255
-            let g = Double((value >> 8) & 0xFF) / 255
-            let b = Double(value & 0xFF) / 255
-            let maxC = max(r, g, b)
-            let delta = maxC - min(r, g, b)
-
-            var hue = 0.0
-            if delta > 0 {
-                if maxC == r {
-                    hue = (g - b) / delta
-                } else if maxC == g {
-                    hue = (b - r) / delta + 2
-                } else {
-                    hue = (r - g) / delta + 4
-                }
-                hue /= 6
-                if hue < 0 { hue += 1 }
-            }
-            let saturation = maxC == 0 ? 0 : delta / maxC
-
-            return Color(hue: hue, saturation: min(saturation, 0.85), brightness: max(maxC, 0.8))
+            Color(hex: normalizedTagHex(hex))
         }
         static func normalizedTagHex(_ hex: String) -> String {
+            if ["#95B7A4", "#96BEAB"].contains(where: { $0.caseInsensitiveCompare(hex) == .orderedSame }) {
+                return "#D9FF00"
+            }
+            if hex.caseInsensitiveCompare("#6366F1") == .orderedSame { return "#6B57C8" }
             for palette in previousTagPalettes {
                 if let index = palette.firstIndex(where: { $0.caseInsensitiveCompare(hex) == .orderedSame }) {
                     return tagColors[index]
@@ -110,40 +130,24 @@ enum Theme {
 
     // MARK: - Typography
     enum Typography {
-        private static let unboundedBlack = "Unbounded-Black"
-        private static let unboundedBold = "Unbounded-Bold"
-        private static let monoRegular = "JetBrainsMono-Regular"
-        private static let monoMedium = "JetBrainsMono-Medium"
-        private static let monoBold = "JetBrainsMono-Bold"
-        static let display = Font.custom(unboundedBlack, size: 34)
-        static let displayLarge = Font.custom(unboundedBlack, size: 40)
-        static let displayTracking: CGFloat = -0.5
-        static func heading(_ size: CGFloat) -> Font {
-            .custom(unboundedBold, size: size)
-        }
-        static func figure(_ size: CGFloat) -> Font {
-            .custom(unboundedBold, size: size)
-        }
-        static let editorTitle = Font.system(size: 24, weight: .bold)
-
+        static let display = Font.system(size: 32, weight: .semibold)
+        static let displayLarge = Font.system(size: 38, weight: .semibold)
+        static let displayTracking: CGFloat = -1.2
+        static func heading(_ size: CGFloat) -> Font { .system(size: size, weight: .semibold) }
+        static func figure(_ size: CGFloat) -> Font { .system(size: size, weight: .medium, design: .rounded) }
+        static let editorTitle = Font.system(size: 24, weight: .semibold)
         static let title = Font.system(size: 20, weight: .semibold)
-        static let titleTracking: CGFloat = -0.5
-
+        static let titleTracking: CGFloat = -0.4
         static let body = Font.system(size: 16)
         static let bodyTracking: CGFloat = -0.2
-
         static let callout = Font.system(size: 14)
         static let caption = Font.system(size: 12)
-        static let section = Font.custom(monoMedium, size: 11)
-        static let eyebrow = Font.custom(monoRegular, size: 11)
-        static let eyebrowTracking: CGFloat = 0.6
-        static let subtitle = Font.custom(monoRegular, size: 12)
+        static let section = Font.system(size: 12, weight: .medium)
+        static let eyebrow = Font.system(size: 10, weight: .medium)
+        static let eyebrowTracking: CGFloat = 1.1
+        static let subtitle = Font.system(size: 12)
         static func numeric(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-            switch weight {
-            case .bold, .heavy, .black, .semibold: return .custom(monoBold, size: size)
-            case .medium: return .custom(monoMedium, size: size)
-            default: return .custom(monoRegular, size: size)
-            }
+            .system(size: size, weight: weight, design: .rounded).monospacedDigit()
         }
     }
 
@@ -166,7 +170,7 @@ enum Theme {
         static let sm: CGFloat = 6
         static let md: CGFloat = 10
         static let lg: CGFloat = 14
-        static let card: CGFloat = 16
+        static let card: CGFloat = 22
         static let xl: CGFloat = 18
         static let capturePill: CGFloat = 18
         static let sheet: CGFloat = 26

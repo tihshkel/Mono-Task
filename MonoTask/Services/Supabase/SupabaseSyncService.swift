@@ -185,7 +185,10 @@ final class SupabaseSyncService {
             NotificationService.shared.refresh(context: context)
             let now = Date.now
             SupabaseConfig.shared.lastSyncDate = now
-            SupabaseService.shared.hasPendingChanges = SupabaseService.shared.localChangeRevision != syncRevision
+            let pendingReminderSync =
+                (try? context.fetch(FetchDescriptor<TaskItem>()))?.contains { $0.reminderSyncPending } ?? false
+            SupabaseService.shared.hasPendingChanges =
+                SupabaseService.shared.localChangeRevision != syncRevision || pendingReminderSync
             SupabaseService.shared.syncStatus = .success(now)
             SupabaseService.shared.connectionStatus = .connected
             print("[SupabaseSync] Sync completed successfully at \(now.formatted(date: .omitted, time: .standard))")
@@ -341,6 +344,7 @@ final class SupabaseSyncService {
                         priority: Priority(rawValue: remoteTask.priorityRaw) ?? .none,
                         isHighPriorityToday: remoteTask.isHighPriorityToday,
                         dueDate: remoteTask.dueDate,
+                        reminderMinutesBefore: remoteTask.reminderMinutesBefore,
                         tags: matchedTags
                     )
                     newTask.id = remoteTask.id
@@ -371,11 +375,14 @@ final class SupabaseSyncService {
                             || remoteTask.priorityRaw != existing.priorityRaw
                             || remoteTask.isHighPriorityToday != existing.isHighPriorityToday
                             || remoteTask.dueDate != existing.dueDate || remoteTask.completedAt != existing.completedAt
+                            || (remoteTask.includesReminderTiming
+                                && remoteTask.reminderMinutesBefore != existing.reminderMinutesBefore)
                             || remoteTask.sortOrder != existing.sortOrder)
                 }
 
                 let localChanged =
-                    existing.isPendingOfflineSync || (existing.updatedAt > (existing.serverUpdatedAt ?? .distantPast))
+                    existing.isPendingOfflineSync || existing.reminderSyncPending
+                    || (existing.updatedAt > (existing.serverUpdatedAt ?? .distantPast))
 
                 if serverChanged {
                     if localChanged {
@@ -393,6 +400,10 @@ final class SupabaseSyncService {
                     existing.isHighPriorityToday = remoteTask.isHighPriorityToday
                     existing.completedAt = remoteTask.completedAt
                     existing.dueDate = remoteTask.dueDate
+                    if remoteTask.includesReminderTiming {
+                        existing.reminderMinutesBefore = remoteTask.reminderMinutesBefore
+                        existing.reminderSyncPending = false
+                    }
                     existing.sortOrder = remoteTask.sortOrder
                     existing.tags = matchedTags
                     existing.updatedAt = remoteTask.updatedAt
@@ -416,6 +427,7 @@ final class SupabaseSyncService {
                     priority: Priority(rawValue: remoteTask.priorityRaw) ?? .none,
                     isHighPriorityToday: remoteTask.isHighPriorityToday,
                     dueDate: remoteTask.dueDate,
+                    reminderMinutesBefore: remoteTask.reminderMinutesBefore,
                     tags: matchedTags
                 )
                 newTask.id = remoteTask.id
@@ -818,7 +830,9 @@ final class SupabaseSyncService {
 
         // Push Tasks (only offline pending changes or new local records)
         let tasks = (try? context.fetch(FetchDescriptor<TaskItem>())) ?? []
-        let tasksToPush = tasks.filter { $0.isPendingOfflineSync || $0.serverUpdatedAt == nil }
+        let tasksToPush = tasks.filter {
+            $0.isPendingOfflineSync || $0.serverUpdatedAt == nil || $0.reminderSyncPending
+        }
         if !tasksToPush.isEmpty {
             let taskDTOs = tasksToPush.map { task in
                 TaskItemDTO(
@@ -831,6 +845,7 @@ final class SupabaseSyncService {
                     createdAt: task.createdAt,
                     completedAt: task.completedAt,
                     dueDate: task.dueDate,
+                    reminderMinutesBefore: task.reminderMinutesBefore,
                     sortOrder: task.sortOrder,
                     tagIds: task.tags.map(\.id),
                     updatedAt: task.updatedAt,
@@ -841,14 +856,29 @@ final class SupabaseSyncService {
             // server's value; otherwise the next pull sees a "server change", declares a
             // conflict and discards any edit made in the meantime.
             let pushedUpdatedAt = Dictionary(uniqueKeysWithValues: taskDTOs.map { ($0.id, $0.updatedAt) })
-            let savedTasks: [TaskItemDTO] = try await client.from("monotask_tasks").upsert(taskDTOs).select().execute()
-                .value
+            let savedTasks: [TaskItemDTO]
+            do {
+                savedTasks = try await client.from("monotask_tasks").upsert(taskDTOs).select().execute().value
+            } catch let error as PostgrestError
+                where error.code == "PGRST204" && error.message.contains("reminder_minutes_before")
+            {
+                // Older databases still sync tasks. Keep local reminder edits queued until the additive migration is applied.
+                let legacy = taskDTOs.map { dto in
+                    var copy = dto
+                    copy.includesReminderTiming = false
+                    return copy
+                }
+                savedTasks = try await client.from("monotask_tasks").upsert(legacy).select().execute().value
+            }
             let serverUpdatedAt = Dictionary(uniqueKeysWithValues: savedTasks.map { ($0.id, $0.updatedAt) })
             for task in tasksToPush {
                 task.serverUpdatedAt = serverUpdatedAt[task.id] ?? task.updatedAt
                 // Edited again while the request was in flight: keep it pending for the next push
                 if task.updatedAt == pushedUpdatedAt[task.id] {
                     task.isPendingOfflineSync = false
+                    if savedTasks.first(where: { $0.id == task.id })?.includesReminderTiming == true {
+                        task.reminderSyncPending = false
+                    }
                 }
             }
             print("[SupabaseSync] Pushed \(taskDTOs.count) tasks")
