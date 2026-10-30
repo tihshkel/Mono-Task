@@ -1,4 +1,3 @@
-/* Invitation codes stay in the fragment. No analytics, network validation or automatic app launch. */
 (function () {
   'use strict';
   function parseCode(input) {
@@ -7,8 +6,11 @@
       try {
         const url = new URL(value);
         if (url.username || url.password || url.port) return null;
-        if (url.protocol === 'https:' && url.hostname === 'egoar777.github.io' &&
-            url.pathname === '/MonoTask/join/' && !url.search) value = url.hash.slice(1);
+        const pages = {
+          'tihshkel.github.io': '/Mono-Task/join/',
+          'egoar777.github.io': '/MonoTask/join/'
+        };
+        if (url.protocol === 'https:' && pages[url.hostname] === url.pathname && !url.search) value = url.hash.slice(1);
         else if (url.protocol === 'com.monotask.ios:' && url.hostname === 'join') value = url.searchParams.get('code') || '';
         else return null;
       } catch { return null; }
@@ -25,23 +27,31 @@
   const status = document.getElementById('status');
   const manual = document.getElementById('manual');
   const input = document.getElementById('code');
+  const copyLabel = document.getElementById('copy-label');
+  const invitation = document.getElementById('invitation');
+  const folder = document.getElementById('folder-peek');
   let code;
   function update(value) {
     code = parseCode(value);
     open.setAttribute('aria-disabled', String(!code));
     copy.disabled = !code;
+    copyLabel.textContent = 'Скопировать код';
+    input.readOnly = false;
     if (code) {
       open.href = appURL(code);
-      status.textContent = 'Нажмите, чтобы открыть приглашение в приложении.';
+      invitation.dataset.state = 'ready';
+      status.textContent = 'Нажмите «Открыть в MonoTask» — подключим папку и сразу покажем задачи.';
     } else {
       open.removeAttribute('href');
       manual.hidden = false;
-      input.readOnly = false;
-      status.textContent = 'В приглашении нет корректного кода. Попросите отправителя прислать новую ссылку или вставьте код ниже.';
+      invitation.dataset.state = value.trim() ? 'invalid' : 'missing';
+      status.textContent = value.trim()
+        ? 'Не удалось прочитать код. Вставьте приглашение ниже или попросите отправить новую ссылку.'
+        : 'У вас есть приглашение? Вставьте ссылку или код ниже.';
     }
   }
-  update(window.location.href);
-  window.addEventListener('hashchange', () => update(window.location.href));
+  update(window.location.hash.slice(1));
+  window.addEventListener('hashchange', () => update(window.location.hash.slice(1)));
   input.addEventListener('input', () => update(input.value));
   open.addEventListener('click', (event) => {
     if (!code) { event.preventDefault(); return; }
@@ -51,6 +61,7 @@
     if (!code) return;
     try {
       await navigator.clipboard.writeText(code);
+      copyLabel.textContent = 'Код скопирован';
       status.textContent = 'Код скопирован. В MonoTask: Общие списки → Присоединиться.';
     } catch {
       manual.hidden = false;
@@ -60,5 +71,9 @@
       input.select();
       status.textContent = 'Выделенный код можно скопировать вручную.';
     }
+  });
+  folder.addEventListener('click', () => {
+    const expanded = folder.classList.toggle('is-open');
+    folder.setAttribute('aria-pressed', String(expanded));
   });
 }());

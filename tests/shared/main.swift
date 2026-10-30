@@ -25,18 +25,27 @@ check(
 check(SharedInvite.parseCode(String(repeating: "g", count: 32)) == nil, "Nonhex invitation input is rejected")
 check(SharedInvite.parseCode("short") == nil, "Truncated codes are rejected")
 let invite = SharedInvite(code: code, expiresAt: .now)
-check(invite.url.absoluteString == "https://egoar777.github.io/MonoTask/join/#\(code)", "Shared URLs use HTTPS")
+check(invite.url.absoluteString == "https://tihshkel.github.io/Mono-Task/join/#\(code)", "Shared URLs use the Mono-Task Pages site")
 check(SharedInvite.parseCode(invite.url.absoluteString) == code, "HTTPS invitation links parse")
 check(
-    SharedInvite.parseCode("https://egoar777.github.io/MonoTask/join/#\(code.uppercased())") == code,
+    SharedInvite.parseCode("https://tihshkel.github.io/Mono-Task/join/#\(code.uppercased())") == code,
     "HTTPS codes normalize")
+check(
+    SharedInvite.parseCode("https://egoar777.github.io/MonoTask/join/#\(code)") == code,
+    "Previously shared Pages links still parse")
 for url in [
+    "https://tihshkel.github.io/other/#\(code)",
+    "https://tihshkel.github.io/MonoTask/join/#\(code)",
+    "https://evil.test/Mono-Task/join/#\(code)",
+    "http://tihshkel.github.io/Mono-Task/join/#\(code)",
+    "https://tihshkel.github.io@evil.test/Mono-Task/join/#\(code)",
+    "https://tihshkel.github.io/Mono-Task/join/?code=\(code)",
+    "https://tihshkel.github.io/Mono-Task/join/#short",
     "https://egoar777.github.io/other/#\(code)",
-    "https://evil.test/MonoTask/join/#\(code)",
+    "https://egoar777.github.io/Mono-Task/join/#\(code)",
     "http://egoar777.github.io/MonoTask/join/#\(code)",
     "https://egoar777.github.io@evil.test/MonoTask/join/#\(code)",
     "https://egoar777.github.io/MonoTask/join/?code=\(code)",
-    "https://egoar777.github.io/MonoTask/join/#short",
 ] {
     check(SharedInvite.parseCode(url) == nil, "Invalid HTTPS invitations are rejected")
 }

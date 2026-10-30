@@ -86,7 +86,7 @@ struct SharedSnapshot: Codable, Sendable {
 struct SharedInvite: Codable, Sendable {
     var code: String
     var expiresAt: Date
-    var url: URL { URL(string: "https://egoar777.github.io/MonoTask/join/#\(code)")! }
+    var url: URL { URL(string: "https://tihshkel.github.io/Mono-Task/join/#\(code)")! }
     enum CodingKeys: String, CodingKey {
         case code
         case expiresAt = "expires_at"
@@ -96,10 +96,7 @@ struct SharedInvite: Codable, Sendable {
         let value: String
         if let parts = URLComponents(string: trimmed), parts.scheme == "com.monotask.ios", parts.host == "join" {
             value = parts.queryItems?.first { $0.name == "code" }?.value ?? ""
-        } else if let parts = URLComponents(string: trimmed), parts.scheme == "https",
-            parts.host == "egoar777.github.io", parts.port == nil,
-            parts.user == nil, parts.password == nil, parts.path == "/MonoTask/join/", parts.query == nil
-        {
+        } else if let parts = URLComponents(string: trimmed), isInvitationPage(parts) {
             value = parts.fragment ?? ""
         } else {
             value = trimmed
@@ -107,6 +104,19 @@ struct SharedInvite: Codable, Sendable {
         let lower = value.lowercased()
         guard lower.count == 32, lower.allSatisfy({ "0123456789abcdef".contains($0) }) else { return nil }
         return lower
+    }
+
+    /// New shares use the Mono-Task Pages site. Links already sent from the previous site still open.
+    private static func isInvitationPage(_ parts: URLComponents) -> Bool {
+        guard parts.scheme == "https", parts.port == nil, parts.user == nil,
+            parts.password == nil, parts.query == nil, let host = parts.host?.lowercased()
+        else { return false }
+        switch (host, parts.path) {
+        case ("tihshkel.github.io", "/Mono-Task/join/"), ("egoar777.github.io", "/MonoTask/join/"):
+            return true
+        default:
+            return false
+        }
     }
 }
 

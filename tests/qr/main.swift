@@ -17,7 +17,7 @@ let legacy = SharedQRCode.image(for: "com.monotask.ios://join?code=\(code)")!
 check(SharedQRCode.invitation(in: legacy) == code, "Existing app links also scan")
 let unrelated = SharedQRCode.image(for: "https://evil.test/join/#\(code)")!
 check(SharedQRCode.invitation(in: unrelated) == nil, "Other services cannot be treated as invitations")
-let truncated = SharedQRCode.image(for: "https://egoar777.github.io/MonoTask/join/#short")!
+let truncated = SharedQRCode.image(for: "https://tihshkel.github.io/Mono-Task/join/#short")!
 check(SharedQRCode.invitation(in: truncated) == nil, "A damaged invitation is rejected before joining")
 
 for (type, options) in [
