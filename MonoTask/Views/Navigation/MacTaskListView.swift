@@ -11,6 +11,7 @@ struct MacTaskListView: View {
 
     let scope: TaskScope
     let today: Date
+    let onRequestCapture: (Tag?, Bool) -> Void
 
     @AppStorage("monotask_task_layout") private var taskLayout = "list"
     @State private var search = ""
@@ -127,7 +128,7 @@ struct MacTaskListView: View {
         }
         .clearCompletedAlert(isPresented: $showingClearCompleted, tasks: completedTasks)
         .onReceive(NotificationCenter.default.publisher(for: .macFocusNewTask)) { _ in
-            isCaptureFocused = true
+            onRequestCapture(activeTag, scope == .highPriority)
         }
     }
 

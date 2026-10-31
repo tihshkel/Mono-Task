@@ -93,16 +93,33 @@ enum Theme {
 
         static let danger = adaptive("#BD341C", "#FF8466")
         static let dangerMuted = danger.opacity(0.14)
-        static let tagColors: [String] = [
-            "#FF5429",  // Exuberant Orange
-            "#6B57C8",  // Blue Violet
-            "#D9FF00",  // Sun Glare
-            "#B397ED",  // Soft violet
-            "#D95D37",  // Clay orange
-            "#946BC9",  // Orchid violet
-            "#A7BD19",  // Deep lime
-            "#CB8575",  // Muted orange
+        static let tagColorOptions: [(hex: String, name: String)] = [
+            ("#FF5429", "Ярко-оранжевый"),
+            ("#6B57C8", "Фиолетовый"),
+            ("#D9FF00", "Лаймовый"),
+            ("#B397ED", "Лавандовый"),
+            ("#D95D37", "Терракотовый"),
+            ("#946BC9", "Орхидея"),
+            ("#A7BD19", "Оливковый"),
+            ("#CB8575", "Пыльная роза"),
+            ("#E84B5C", "Малиновый"),
+            ("#E56A9B", "Розовый"),
+            ("#DA64C7", "Фуксия"),
+            ("#5C76DB", "Индиго"),
+            ("#3A8DDE", "Синий"),
+            ("#3EB7E0", "Голубой"),
+            ("#32BDB0", "Бирюзовый"),
+            ("#2D9B83", "Изумрудный"),
+            ("#47A96A", "Зелёный"),
+            ("#87BF69", "Шалфейный"),
+            ("#E4BB39", "Золотистый"),
+            ("#F29438", "Абрикосовый"),
+            ("#A77653", "Карамельный"),
+            ("#BB9A7A", "Песочный"),
+            ("#7B91A5", "Серо-голубой"),
+            ("#8C8F97", "Графитовый"),
         ]
+        static let tagColors = tagColorOptions.map(\.hex)
         // Legacy colours stay compatible with existing databases.
         private static let previousTagPalettes: [[String]] = [
             ["#8BA9D7", "#B4A0D7", "#8CB8A5", "#E1B86C", "#D3988A", "#D8A9C0", "#9DA9CD", "#85B8BD"],
@@ -115,6 +132,9 @@ enum Theme {
             Color(hex: normalizedTagHex(hex))
         }
         static func normalizedTagHex(_ hex: String) -> String {
+            if let current = tagColors.first(where: { $0.caseInsensitiveCompare(hex) == .orderedSame }) {
+                return current
+            }
             if ["#95B7A4", "#96BEAB"].contains(where: { $0.caseInsensitiveCompare(hex) == .orderedSame }) {
                 return "#D9FF00"
             }

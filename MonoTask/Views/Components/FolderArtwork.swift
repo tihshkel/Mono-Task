@@ -12,8 +12,8 @@ struct FolderArtwork: View {
     @State private var hovered = false
 
     private var dark: Bool { scheme == .dark }
-    private var pocketTop: Color { Color(hex: dark ? "#514653" : "#FFFDFA") }
-    private var pocketBottom: Color { Color(hex: dark ? "#312A32" : "#E8E0DA") }
+    private var pocketTop: Color { tint.mix(with: .white, by: dark ? 0.12 : 0.40) }
+    private var pocketBottom: Color { dark ? tint.mix(with: .black, by: 0.28) : tint.mix(with: .white, by: 0.08) }
 
     var body: some View {
         GeometryReader { geometry in
@@ -27,8 +27,11 @@ struct FolderArtwork: View {
                     .offset(y: height * 0.43)
 
                 FolderBackCover()
-                    .fill(LinearGradient(colors: [pocketTop, pocketBottom], startPoint: .top, endPoint: .bottom))
-                    .overlay(FolderBackCover().fill(tint.opacity(dark ? 0.22 : 0.14)))
+                    .fill(
+                        LinearGradient(
+                            colors: [tint.mix(with: .white, by: 0.08), tint.mix(with: .black, by: dark ? 0.46 : 0.24)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
                     .overlay(FolderBackCover().strokeBorderHighlight(dark: dark))
                     .frame(width: width * 0.82, height: height * 0.79)
                     .offset(y: -height * 0.015)
@@ -41,8 +44,8 @@ struct FolderArtwork: View {
                     .overlay {
                         FolderPocket().fill(
                             RadialGradient(
-                                colors: [tint.opacity(dark ? 0.18 : 0.13), .clear],
-                                center: .bottomTrailing, startRadius: 0, endRadius: width * 0.8))
+                                colors: [.white.opacity(dark ? 0.12 : 0.22), .clear],
+                                center: .topLeading, startRadius: 0, endRadius: width * 0.9))
                     }
                     .overlay {
                         FolderPocket().stroke(
@@ -84,11 +87,11 @@ struct FolderArtwork: View {
             .resizable().scaledToFit()
             .symbolRenderingMode(.monochrome)
             .foregroundStyle(
-                Color.black.opacity(dark ? 0.3 : 0.16)
+                tint.mix(with: .black, by: dark ? 0.64 : 0.52)
                     .shadow(.inner(color: .black.opacity(dark ? 0.55 : 0.3), radius: depth, x: 0, y: depth))
             )
             .frame(width: width * 0.25, height: width * 0.25)
-            .shadow(color: .white.opacity(dark ? 0.14 : 0.85), radius: depth * 0.4, x: 0, y: depth)
+            .shadow(color: .white.opacity(dark ? 0.28 : 0.7), radius: depth * 0.4, x: 0, y: depth)
     }
 
     private func pocketDetail(width: CGFloat) -> some View {
@@ -96,13 +99,14 @@ struct FolderArtwork: View {
             if let count {
                 Text("\(count)")
                     .font(.system(size: 9, weight: .medium, design: .rounded))
-                    .foregroundStyle(dark ? Color.white.opacity(0.5) : Color.black.opacity(0.34))
+                    .foregroundStyle(dark ? Color.white.opacity(0.85) : Color.black.opacity(0.65))
                     .padding(.horizontal, 6).frame(height: 17)
                     .background(.black.opacity(dark ? 0.12 : 0.025), in: Capsule())
                     .overlay(Capsule().strokeBorder(.white.opacity(dark ? 0.07 : 0.7), lineWidth: 0.7))
-                Capsule().fill(tint.opacity(0.16)).frame(width: 25, height: 2)
+                Capsule().fill(dark ? .white.opacity(0.22) : .black.opacity(0.16)).frame(width: 25, height: 2)
                     .overlay(alignment: .leading) {
-                        Capsule().fill(tint.opacity(0.65)).frame(width: 25 * min(1, max(0, progress)), height: 2)
+                        Capsule().fill(dark ? .white.opacity(0.8) : .black.opacity(0.55))
+                            .frame(width: 25 * min(1, max(0, progress)), height: 2)
                     }
             }
         }

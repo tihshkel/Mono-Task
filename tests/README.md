@@ -34,6 +34,33 @@ xcrun swift-format lint --strict --recursive MonoTask tests
 
 ## Проверки интерфейса
 
+### Приглашения в общую папку
+
+В `SharedListUITests` сценарии `testInvitationOpensFolderWithoutSecondConfirmation` и `testManualInvitationOpensFolderWithOneAction` проверяют прямое открытие папки по ссылке и единственное действие при ручном вводе. `testInvitationFailureOffersRetryAndKeepsCodeInDetails` проверяет ошибку, повтор, скрытый код, смену приглашения и отмену. Используется только демонстрационный режим `--screenshots --shared-preview`; дополнительный `--shared-join-error` имитирует отказ без обращения к серверу. Реальный скан камерой и импорт QR-изображения дополнительно проверить на устройстве: после распознавания должна сразу открыться папка, без «Принять».
+
+### Первое знакомство
+
+При первом запуске без сохранённого входа показываются четыре экрана: папки, добавление, выполнение и приоритет. «Начать» сохраняет `monotask_onboarding_completed` на устройстве и открывает вход/регистрацию. После перезапуска и выхода из аккаунта знакомство не повторяется; восстановленный аккаунт сразу открывает задачи. При уменьшении движения иллюстрации статичные, при уходе в фон анимации останавливаются.
+
+Аргумент Debug-сборки `--onboarding-preview` на Mac и симуляторе открывает знакомство без изменения флага и без запуска облачной сессии. `OnboardingTests` проверяет все четыре шага, возврат назад и переход к входу/регистрации: `xcodebuild test … -only-testing:ReviewUITests/OnboardingTests`. В обычном запуске дополнительно проверить завершение → перезапуск → вход без повторного знакомства, а также VoiceOver, крупный текст и обе темы.
+
+### Быстрый ввод на Mac
+
+`tests/ui/mac/CaptureTests.swift` проверяет ⌘N на главном экране и в папке: ввод с клавиатуры, сохранение черновика при повторной команде, закрытие по Esc и кнопке, создание в выбранной папке и сохранение приоритета. Проверки работают с отдельной Debug-сборкой `com.monotask.capturepreview` и базой в памяти. Обычное приложение и его данные не используются. При системном уменьшении движения карточка появляется без наклона, масштаба и смещения. Тайм-аут `enabling automation mode` возникает до выполнения сценариев; в таком случае их можно проверить вручную в этой отдельной сборке.
+
+```sh
+xcodebuild -project MonoTask.xcodeproj -scheme MonoTask -destination 'platform=macOS' \
+  -derivedDataPath /tmp/MonoTaskCaptureReview build CODE_SIGNING_ALLOWED=NO \
+  PRODUCT_BUNDLE_IDENTIFIER=com.monotask.capturepreview
+xcodegen generate --spec tests/ui/mac/project.yml --project /tmp/MonoTaskMacCaptureReview
+xcodebuild -project /tmp/MonoTaskMacCaptureReview/MonoTaskMacCaptureReview.xcodeproj \
+  -scheme Capture -destination 'platform=macOS,arch=arm64' test
+```
+
+### iPhone
+
+`WorkspaceFolderListTests` проверяет раскрывающийся список папок: независимое сворачивание, сохранение состояния при переключении вида, выполнение и возврат задачи, открытие редактора, удаление с отменой, создание задачи в выбранной папке и поиск внутри личных и общих папок. Используется база в памяти и демонстрационный общий список без сети. После каждого сценария восстанавливается исходный вид папок. Запуск отдельного набора: `xcodebuild test … -only-testing:ReviewUITests/WorkspaceFolderListTests`.
+
 В Debug-сборке для симулятора аргумент `--scroll-gesture-test` открывает 40 задач в базе в памяти. Облачная сессия не запускается; данные пропадают после завершения приложения. На физическом устройстве и в Release этот режим отсутствует.
 
 ```sh

@@ -15,6 +15,57 @@ struct TagEditSheet: View {
     @State private var selectedWeekdays: Set<Weekday> = []
     @State private var confirmingDelete = false
 
+    private static let folderIcons: [(symbol: String, name: String)] = [
+        ("square.stack.3d.up.fill", "Проекты"),
+        ("briefcase.fill", "Работа"),
+        ("graduationcap.fill", "Учёба"),
+        ("house.fill", "Дом"),
+        ("heart.fill", "Личное"),
+        ("paintpalette.fill", "Творчество"),
+        ("airplane", "Путешествия"),
+        ("book.closed.fill", "Книги"),
+        ("leaf.fill", "Природа"),
+        ("sparkles", "Вдохновение"),
+        ("laptopcomputer", "Компьютер"),
+        ("camera.fill", "Фото"),
+        ("folder.fill", "Папка"),
+        ("tray.fill", "Входящие"),
+        ("checklist", "Список дел"),
+        ("calendar", "Календарь"),
+        ("target", "Цели"),
+        ("star.fill", "Избранное"),
+        ("flag.fill", "Важное"),
+        ("bolt.fill", "Энергия"),
+        ("lightbulb.fill", "Идеи"),
+        ("pencil.and.ruler.fill", "Дизайн"),
+        ("doc.text.fill", "Документы"),
+        ("bookmark.fill", "Закладки"),
+        ("globe", "Мир"),
+        ("map.fill", "Карты"),
+        ("location.fill", "Места"),
+        ("car.fill", "Автомобиль"),
+        ("bicycle", "Велосипед"),
+        ("tram.fill", "Транспорт"),
+        ("cup.and.saucer.fill", "Отдых"),
+        ("fork.knife", "Еда"),
+        ("cart.fill", "Покупки"),
+        ("gift.fill", "Подарки"),
+        ("creditcard.fill", "Финансы"),
+        ("chart.bar.fill", "Аналитика"),
+        ("banknote.fill", "Бюджет"),
+        ("dumbbell.fill", "Спорт"),
+        ("figure.run", "Бег"),
+        ("cross.case.fill", "Здоровье"),
+        ("pawprint.fill", "Питомцы"),
+        ("music.note", "Музыка"),
+        ("headphones", "Аудио"),
+        ("gamecontroller.fill", "Игры"),
+        ("film.fill", "Кино"),
+        ("hammer.fill", "Ремонт"),
+        ("wrench.and.screwdriver.fill", "Инструменты"),
+        ("lock.fill", "Приватное"),
+    ]
+
     private var isEditing: Bool {
         tagToEdit != nil
     }
@@ -79,8 +130,9 @@ struct TagEditSheet: View {
 
                     VStack(alignment: .leading, spacing: 10) {
                         EyebrowLabel(text: "Цвет")
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 32), spacing: 12)], spacing: 12) {
-                            ForEach(Theme.Colors.tagColors, id: \.self) { hex in
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 44), spacing: 8)], spacing: 8) {
+                            ForEach(Theme.Colors.tagColorOptions, id: \.hex) { option in
+                                let hex = option.hex
                                 let isSelected = selectedColorHex == hex
                                 Button {
                                     Haptics.selection()
@@ -88,43 +140,54 @@ struct TagEditSheet: View {
                                 } label: {
                                     Circle()
                                         .fill(Theme.Colors.tagColor(hex))
-                                        .frame(width: 26, height: 26)
-                                        .padding(3)
+                                        .frame(width: 30, height: 30)
+                                        .padding(4)
                                         .overlay(
                                             Circle()
                                                 .stroke(
                                                     isSelected ? Theme.Colors.textPrimary : Color.clear, lineWidth: 2)
                                         )
-                                        .contentShape(Circle())
+                                        .frame(width: 44, height: 44).contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel(option.name)
+                                .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+                                .accessibilityIdentifier("folder-color-\(hex)")
+                                .help(option.name)
                             }
                         }
                     }
 
                     VStack(alignment: .leading, spacing: 12) {
                         EyebrowLabel(text: "Значок папки")
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 42))], spacing: 10) {
-                            ForEach(
-                                [
-                                    "square.stack.3d.up.fill", "briefcase.fill", "graduationcap.fill", "house.fill",
-                                    "heart.fill", "paintpalette.fill", "airplane", "book.closed.fill", "leaf.fill",
-                                    "sparkles", "laptopcomputer", "camera.fill",
-                                ], id: \.self
-                            ) { icon in
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 44), spacing: 8)], spacing: 8) {
+                            ForEach(Self.folderIcons, id: \.symbol) { option in
+                                let icon = option.symbol
                                 Button {
-                                    selectedIcon = icon
+                                    Haptics.selection()
+                                    withAnimation(reduceMotion ? nil : Theme.Motion.quick) { selectedIcon = icon }
                                 } label: {
                                     Image(systemName: icon).font(.system(size: 19))
                                         .foregroundStyle(
-                                            selectedIcon == icon ? Theme.Colors.accent : Theme.Colors.textSecondary
+                                            selectedIcon == icon ? Theme.Colors.textPrimary : Theme.Colors.textSecondary
                                         )
-                                        .frame(width: 40, height: 40)
+                                        .frame(width: 44, height: 44)
                                         .background(
                                             selectedIcon == icon
-                                                ? Theme.Colors.accent.opacity(0.12) : Theme.Colors.fill,
-                                            in: RoundedRectangle(cornerRadius: 12))
-                                }.buttonStyle(.plain).accessibilityLabel(icon)
+                                                ? Theme.Colors.tagColor(selectedColorHex).opacity(0.18)
+                                                : Theme.Colors.fill,
+                                            in: RoundedRectangle(cornerRadius: 12)
+                                        )
+                                        .overlay {
+                                            RoundedRectangle(cornerRadius: 12).strokeBorder(
+                                                selectedIcon == icon ? Theme.Colors.tagColor(selectedColorHex) : .clear,
+                                                lineWidth: 1.5)
+                                        }
+                                }
+                                .buttonStyle(.plain).accessibilityLabel(option.name)
+                                .accessibilityAddTraits(selectedIcon == icon ? [.isSelected] : [])
+                                .accessibilityIdentifier("folder-icon-\(icon)")
+                                .help(option.name)
                             }
                         }
                     }

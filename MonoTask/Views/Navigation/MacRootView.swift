@@ -11,6 +11,8 @@ enum SidebarSelection: Hashable {
 }
 
 #if os(macOS)
+import AppKit
+
 struct MacRootView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: [SortDescriptor(\Tag.sortOrder), SortDescriptor(\Tag.createdAt)]) private var tags: [Tag]
@@ -23,6 +25,7 @@ struct MacRootView: View {
     @State private var tagToDelete: Tag? = nil
     @State private var dropTargetTagId: UUID? = nil
     @State private var today: Date = Date.now.startOfDay
+    @State private var taskCapture: WorkspaceTaskCapture?
 
     init(initialTab: AppTab = .today) {
         let initial: SidebarSelection =
@@ -98,6 +101,7 @@ struct MacRootView: View {
                 IslandController.shared.settingsRequested = false
             }
         }
+        .modifier(MacTaskCapturePresentation(request: $taskCapture, tags: tags))
     }
 
     // MARK: - Sidebar
@@ -291,9 +295,13 @@ struct MacRootView: View {
     private var detail: some View {
         switch selection ?? .workspace {
         case .workspace:
-            WorkspaceView(onOpenScope: { selection = .list($0) })
+            WorkspaceView(
+                onOpenScope: { selection = .list($0) },
+                onRequestCapture: { presentCapture(in: $0) })
         case .list(let scope):
-            MacTaskListView(scope: scope.validated(tags: tags), today: today)
+            MacTaskListView(scope: scope.validated(tags: tags), today: today) { tag, highPriority in
+                presentCapture(in: tag, highPriority: highPriority)
+            }
         case .activity:
             HeatmapView()
                 .padding(.top, 12)
@@ -309,6 +317,12 @@ struct MacRootView: View {
     }
 
     // MARK: - Actions
+
+    private func presentCapture(in tag: Tag?, highPriority: Bool = false) {
+        guard taskCapture == nil, editingTag == nil, !showingAddTagSheet else { return }
+        NSApp.keyWindow?.makeFirstResponder(nil)
+        taskCapture = WorkspaceTaskCapture(tag: tag, highPriority: highPriority)
+    }
 
     /// Dropping a task on a context moves it there (tasks have one context).
     private func moveDroppedTask(_ items: [String], to tag: Tag) -> Bool {
@@ -331,6 +345,80 @@ struct MacRootView: View {
         }
         modelContext.deleteWithSync(tag)
         modelContext.saveAndSync(delaySeconds: 0.1)
+    }
+}
+
+private struct MacTaskCapturePresentation: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var scheme
+    @Binding var request: WorkspaceTaskCapture?
+    let tags: [Tag]
+
+    private var cardTransition: AnyTransition {
+        if reduceMotion { return .opacity }
+        return .asymmetric(
+            insertion: .modifier(
+                active: CaptureCardMotion(progress: 0), identity: CaptureCardMotion(progress: 1)),
+            removal: .opacity.combined(with: .scale(scale: 0.98)).animation(.easeOut(duration: 0.18)))
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .disabled(request != nil)
+            .accessibilityHidden(request != nil)
+            .blur(radius: request == nil || reduceMotion ? 0 : 1.5)
+            .overlay {
+                if let capture = request {
+                    GeometryReader { geometry in
+                        ZStack {
+                            Button {
+                                request = nil
+                            } label: {
+                                Rectangle().fill(.black.opacity(scheme == .dark ? 0.28 : 0.14))
+                                    .contentShape(Rectangle()).ignoresSafeArea()
+                            }
+                            .buttonStyle(.plain).accessibilityHidden(true)
+                            .transition(.opacity.animation(.easeOut(duration: 0.2)))
+
+                            WorkspaceCaptureSheet(
+                                tags: tags, initialTag: capture.tag, highPriority: capture.highPriority,
+                                onClose: { request = nil }
+                            )
+                            .frame(width: min(480, max(340, geometry.size.width - 48)))
+                            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                                    .strokeBorder(Theme.Colors.ruleStrong.opacity(0.65), lineWidth: 0.75)
+                                    .allowsHitTesting(false)
+                            }
+                            .shadow(color: .black.opacity(scheme == .dark ? 0.3 : 0.13), radius: 32, y: 18)
+                            .id(capture.id)
+                            .transition(cardTransition)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+            }
+            .animation(
+                reduceMotion ? .easeOut(duration: 0.14) : .spring(duration: 0.44, bounce: 0.12), value: request?.id)
+    }
+}
+
+private struct CaptureCardMotion: AnimatableModifier {
+    nonisolated var progress: Double
+
+    nonisolated var animatableData: Double {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(0.94 + progress * 0.06)
+            .rotation3DEffect(.degrees(-5 * (1 - progress)), axis: (x: 1, y: 0, z: 0), perspective: 0.35)
+            .offset(y: 20 * (1 - progress))
+            .opacity(progress)
+            .blur(radius: max(0, 2 * (1 - progress)))
     }
 }
 #endif

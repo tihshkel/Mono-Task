@@ -3,6 +3,8 @@ import SwiftData
 
 struct AuthenticatedRootView: View {
     @Environment(AuthManager.self) private var auth
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage("monotask_onboarding_completed") private var onboardingCompleted = false
     @State private var container: ModelContainer?
     @State private var containerUserID: UUID?
     @State private var storeError: String?
@@ -22,14 +24,20 @@ struct AuthenticatedRootView: View {
                 } else {
                     ProgressView("Открываем задачи…")
                 }
+            } else if !onboardingCompleted {
+                OnboardingView { onboardingCompleted = true }
             } else {
                 AuthView()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.Colors.background.ignoresSafeArea())
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: onboardingCompleted)
         .task { await auth.start() }
         .task(id: auth.userID) { await openStoreForCurrentUser() }
+        .onChange(of: auth.userID, initial: true) { _, userID in
+            if userID != nil { onboardingCompleted = true }
+        }
     }
 
     private func openStoreForCurrentUser() async {

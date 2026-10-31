@@ -8,9 +8,65 @@ struct SharedListsView: View {
     @State private var path: [UUID] = []
     @State private var creating = false
     @State private var joining: JoinRequest?
+    @State private var incoming: JoinRequest?
     @State private var destination: UUID?
 
     var body: some View {
+        Group {
+            if let incoming {
+                SharedJoinFolderSheet(initialCode: incoming.code, onClose: { self.incoming = nil }) { listID in
+                    path = [listID]
+                    self.incoming = nil
+                }
+                .id(incoming.id)
+            } else {
+                folders
+            }
+        }
+        .tint(Theme.Colors.accent).foregroundStyle(Theme.Colors.textPrimary).preferredColorScheme(Theme.colorScheme)
+        .sheet(
+            isPresented: $creating,
+            onDismiss: {
+                openDestination()
+                presentPendingInvitation()
+            }
+        ) {
+            SharedCreateFolderSheet { destination = $0 }
+        }
+        .sheet(
+            item: $joining,
+            onDismiss: {
+                openDestination()
+                presentPendingInvitation()
+            }
+        ) { request in
+            SharedJoinFolderSheet(initialCode: request.code) { destination = $0 }
+        }
+        .task(id: scenePhase) {
+            store.activateAccount()
+            guard scenePhase == .active else { return }
+            presentPendingInvitation()
+            while !Task.isCancelled {
+                await store.sync()
+                do { try await Task.sleep(for: .seconds(6)) } catch { break }
+            }
+        }
+        .onChange(of: store.pendingInviteCode) { _, value in
+            if let value, value == incoming?.code || value == joining?.code {
+                store.pendingInviteCode = nil
+            } else {
+                presentPendingInvitation()
+            }
+        }
+        .onChange(of: incoming?.id) { _, value in
+            if value == nil { presentPendingInvitation() }
+        }
+        #if os(macOS)
+        .frame(minWidth: 540, idealWidth: 740, minHeight: 660)
+        #endif
+    }
+
+    private var folders: some View {
         NavigationStack(path: $path) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
@@ -57,34 +113,6 @@ struct SharedListsView: View {
             .navigationBarTitleDisplayMode(.inline)
             #endif
         }
-        .tint(Theme.Colors.accent).foregroundStyle(Theme.Colors.textPrimary).preferredColorScheme(Theme.colorScheme)
-        .sheet(isPresented: $creating, onDismiss: openDestination) {
-            SharedCreateFolderSheet { destination = $0 }
-        }
-        .sheet(
-            item: $joining,
-            onDismiss: {
-                store.pendingInviteCode = nil
-                openDestination()
-            }
-        ) { request in
-            SharedJoinFolderSheet(initialCode: request.code) { destination = $0 }
-        }
-        .task(id: scenePhase) {
-            store.activateAccount()
-            if let pending = store.pendingInviteCode { joining = JoinRequest(code: pending) }
-            guard scenePhase == .active else { return }
-            while !Task.isCancelled {
-                await store.sync()
-                do { try await Task.sleep(for: .seconds(6)) } catch { break }
-            }
-        }
-        .onChange(of: store.pendingInviteCode) { _, value in
-            if let value { joining = JoinRequest(code: value) }
-        }
-        #if os(macOS)
-        .frame(minWidth: 540, idealWidth: 740, minHeight: 660)
-        #endif
     }
 
     private var heading: some View {
@@ -196,6 +224,13 @@ struct SharedListsView: View {
     }
 
     private struct JoinRequest: Identifiable { let id = UUID(); let code: String }
+
+    private func presentPendingInvitation() {
+        guard !isEmbedded || !store.isPresented else { return }
+        guard !creating, joining == nil, incoming == nil, let code = store.pendingInviteCode else { return }
+        incoming = JoinRequest(code: code)
+        store.pendingInviteCode = nil
+    }
 
     private func openDestination() {
         if let destination { path.append(destination); self.destination = nil }

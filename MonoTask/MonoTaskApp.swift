@@ -79,7 +79,9 @@ struct MonoTaskApp: App {
 
     @ViewBuilder private var rootView: some View {
         #if DEBUG && (targetEnvironment(simulator) || os(macOS))
-        if ProcessInfo.processInfo.arguments.contains("--auth-preview") {
+        if ProcessInfo.processInfo.arguments.contains("--onboarding-preview") {
+            OnboardingPreviewRoot()
+        } else if ProcessInfo.processInfo.arguments.contains("--auth-preview") {
             AuthView()
         } else if ProcessInfo.processInfo.arguments.contains("--screenshots") {
             ScreenshotPreviewRoot()

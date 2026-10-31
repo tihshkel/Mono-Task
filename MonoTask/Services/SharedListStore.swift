@@ -195,11 +195,17 @@ final class SharedListStore {
 
     func join(code: String) async throws -> UUID {
         guard let code = SharedInvite.parseCode(code) else { throw SharedError.invalidInvite }
-        if Self.isPreview, let first = lists.first { pendingInviteCode = nil; return first.id }
+        if Self.isPreview, let first = lists.first {
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--shared-join-error") {
+                throw SharedError.server("Приглашение недействительно, уже использовано или срок его действия истёк.")
+            }
+            #endif
+            return first.id
+        }
         let id: UUID = try await action { client in
             try await client.rpc("monotask_shared_join", params: ["p_code": code]).execute().value
         }
-        pendingInviteCode = nil
         await sync(force: true)
         return id
     }

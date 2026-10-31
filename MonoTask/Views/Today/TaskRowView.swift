@@ -9,6 +9,7 @@ struct TaskRowView: View {
     @Bindable var task: TaskItem
     var allTags: [Tag] = []
     var isTargeted: Bool = false
+    var showsTag: Bool = true
     let onEdit: (TaskItem) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -42,7 +43,8 @@ struct TaskRowView: View {
     }
 
     private var hasMeta: Bool {
-        primaryTag != nil || task.hasSubtasks || !task.notes.isEmpty || (task.dueDate != nil && !isDone)
+        (showsTag && primaryTag != nil) || task.hasSubtasks || (showNotes && !task.notes.isEmpty)
+            || (task.dueDate != nil && !isDone)
     }
 
     var body: some View {
@@ -207,7 +209,7 @@ struct TaskRowView: View {
                     .font(Theme.Typography.caption)
                     .foregroundColor(date > .now ? Theme.Colors.accent : Theme.Colors.textMuted)
             }
-            if let tag = primaryTag {
+            if showsTag, let tag = primaryTag {
                 HStack(spacing: 5) {
                     Circle()
                         .fill(isDone ? Theme.Colors.textMuted : tag.color)

@@ -56,8 +56,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.monotask
         "PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]": com.monotask.ios
         "PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]": com.monotask.macos
-        MARKETING_VERSION: "2.1.1"
-        CURRENT_PROJECT_VERSION: 23
+        MARKETING_VERSION: "2.2.0"
+        CURRENT_PROJECT_VERSION: 24
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIconPalette
         "ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES[sdk=iphone*]": "AppIconLight AppIconDark AppIconLightPalette AppIconDarkPalette"
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
