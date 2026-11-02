@@ -1,5 +1,49 @@
 # Проверки
 
+## Mono AI
+
+Проверка очередей голосового ввода без микрофона и системных запросов доступа:
+
+```sh
+swiftc -swift-version 6 -strict-concurrency=complete -parse-as-library MonoTask/Services/MonoAISpeechCallbacks.swift tests/ai/SpeechCallbacks.swift -o /tmp/monoai-speech-callback-tests
+/tmp/monoai-speech-callback-tests
+```
+
+Проверяются четыре результата разрешения, доставленные из фоновой очереди, фоновый результат распознавания, аудиобуфер из фонового tap и повторная остановка. В UI обновления переходят на MainActor; входящие обработчики Speech/AVAudioEngine не наследуют изоляцию интерфейса. На реальном устройстве дополнительно проверить разрешение/отказ доступа, отмену во время запроса разрешения и повторную запись после остановки.
+
+Проверки разбора ответа, маршрутизации папок, автоматических хештегов, сроков на русском и очистки ввода:
+
+```sh
+swiftc -swift-version 6 MonoTask/Services/MonoAIError.swift MonoTask/Services/MonoAIRequest.swift MonoTask/Services/MonoAIRouting.swift MonoTask/Services/MonoAIDeadlineParser.swift MonoTask/Services/MonoAIInput.swift tests/ai/main.swift -o /tmp/monotask-ai-tests
+/tmp/monotask-ai-tests
+```
+
+`tests/ai/InferenceSmoke.swift` проверяет настоящий GGUF через встроенный движок: три русских запроса должны завершиться корректными структурированными ответами. Проверяется итоговый выбор папки после правил маршрутизации, включая «проект по учёбе» и срок. Запускается с явно скачанной моделью, без аккаунта, сети и изменения пользовательских задач. Для сборки подключите framework `llama` из бинарного артефакта, `Vendor/MonoInference/Sources/MonoInference/LocalInference.swift` и сервисы `MonoAIError`, `MonoAIRequest`, `MonoAIRouting`, `MonoAIDeadlineParser`. Запускайте с `MTL_DEBUG_LAYER=1` для регрессии ошибки Metal `constantValues must not be nil`; зависимость b6750 содержит upstream-исправление #16065, проверка Metal остаётся включённой.
+
+Настройки голоса проверяются без микрофона и воспроизведения:
+
+```sh
+swiftc -swift-version 6 -strict-concurrency=complete -parse-as-library MonoTask/Services/MonoAIVoice.swift tests/ai/VoicePreferences.swift -o /tmp/monoai-voice-tests
+/tmp/monoai-voice-tests
+```
+
+Пакет нейроголосов проверяется отдельно от движка и без воспроизведения:
+
+```sh
+swiftc -swift-version 6 -strict-concurrency=complete -parse-as-library MonoTask/Services/MonoAI{Error,VoiceManifest,VoicePack,Wave,ModelDownload}.swift tests/ai/VoicePack.swift -o /tmp/monoai-voicepack-tests
+/tmp/monoai-voicepack-tests
+```
+
+Дополнительный аргумент — путь к уже скачанной модели — проверяет SHA-256 всех 11 файлов. `VoiceProbeTests.swift` предназначен для отдельного macOS XCTest-таргета с зависимостью `MonoVoice` и `MonoAIWave.swift`: генерирует русские образцы четырёх голосов, проверяет длительность, конечность и ненулевую амплитуду, сохраняет WAV в игнорируемый `build/mono-ai/voice-samples`. Тест не включает микрофон и не воспроизводит звук. Требуются модель в `/tmp/MonoAIResearch/qwen-voices` и официальный Metal Toolchain Xcode (`xcodebuild -downloadComponent MetalToolchain`). Закреплены MLX Audio 0.1.3, MLX Swift 0.31.4, MLX Swift LM 3.31.4 и Swift Syntax 602.0.0 для Swift 6.2. Версия MLX Audio 0.1.3 содержит тот же Qwen, что 0.1.4, но не включает неиспользуемый BreezeTTS. Модель загружается только из локальной папки, сетевого fallback при синтезе нет.
+
+Новые сценарии в `tests/ai/main.swift` описывают уточнение срока и папки без потери исходной задачи, отрицание приоритета, явное «без папки», неизвестную папку, независимые дела через запятую, сохранение набранного текста при записи и запрет выдуманных чисел. В текущей итерации по просьбе пользователя сборка и тесты не запускались; наличие этих сценариев не означает успешный прогон.
+
+При разрешённой ручной проверке дополнительно проверить: первый запрос и отказ разрешений; остановку/отправку до финального результата речи; повторную запись; отключение гарнитуры; фон/возврат; отсутствие Gemma; повреждённую модель; отмену во время её проверки; редактирование карточки при подсказке; смену аккаунта; удаление выбранной папки; ошибку сохранения; недоступный Qwen и явно выбранный системный голос. Рабочую базу и настоящий микрофон не использовать в автоматических сценариях без отдельного согласия.
+
+`tests/ai/DownloadProbe.swift` скачивает только 1 МБ через HTTP Range и проверяет, что делегат сообщает байтовый прогресс, а ранняя отмена завершается без зависания. Сборка: `swiftc -parse-as-library MonoTask/Services/MonoAIError.swift MonoTask/Services/MonoAIModelDownload.swift tests/ai/DownloadProbe.swift -o /tmp/monoai-download-probe`.
+
+В приложении проверить загрузку/отмену/повтор, удаление, перезапуск без сети, текст → предложение → исправление папки → однократное добавление. Проверить ✦ в Mac Island при свёрнутом окне и добавление в очередь островка. Голос проверяется на реальном устройстве с разрешениями микрофона/речи и поддержкой русского офлайн-распознавания; отказ не должен блокировать текст.
+
 ## Сроки задач и уведомления заранее
 
 В редакторе задачи дата срока независима от уведомления. Можно выбрать интервал из списка, свой интервал или оставить срок без уведомления. Планировщик пропускает уже прошедшее время уведомления; перенос срока заменяет запрос с тем же ID, выполнение отменяет запрос.

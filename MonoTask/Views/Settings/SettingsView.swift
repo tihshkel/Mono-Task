@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 private enum SettingsPage: String, Hashable {
+    case ai = "Mono AI"
     case categories = "Категории и расписание"
     case notifications = "Уведомления"
     case appearance = "Оформление"
@@ -58,6 +59,8 @@ struct SettingsView: View {
                     schedulePreview
                     VStack(alignment: .leading, spacing: 10) {
                         GroupCard {
+                            destination(.ai, icon: "sparkles", subtitle: "Локальный помощник · Gemma 3 1B")
+                            Hairline(leading: 58)
                             destination(
                                 .notifications, icon: "bell", subtitle: morningSummary,
                                 badge: notificationStatus)
@@ -88,6 +91,7 @@ struct SettingsView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         switch page {
+                        case .ai: MonoAISettingsView()
                         case .categories: categories
                         case .notifications: NotificationPreferencesView()
                         case .appearance: appearance

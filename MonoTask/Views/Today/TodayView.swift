@@ -86,6 +86,10 @@ struct TodayView: View {
                                 .id("top_anchor")
                                 .padding(.bottom, 12)
 
+                            if case .tag = activeScope, let activeTag {
+                                FolderAIKeywordsView(tag: activeTag)
+                            }
+
                             if !highPriorityTasks.isEmpty {
                                 taskSection(
                                     title: "Приоритет",

@@ -14,6 +14,7 @@ struct TagEditSheet: View {
     @State private var selectedColorHex: String = Theme.Colors.tagColors[0]
     @State private var selectedWeekdays: Set<Weekday> = []
     @State private var confirmingDelete = false
+    @State private var aiKeywords = ""
 
     private static let folderIcons: [(symbol: String, name: String)] = [
         ("square.stack.3d.up.fill", "Проекты"),
@@ -223,6 +224,15 @@ struct TagEditSheet: View {
                             .font(Theme.Typography.caption)
                             .foregroundColor(Theme.Colors.textMuted)
                     }
+                    VStack(alignment: .leading, spacing: 10) {
+                        EyebrowLabel(text: "Mono AI · хештеги")
+                        Text(MonoAIKeywords.automatic(for: name).map { "#" + $0 }.joined(separator: "  "))
+                            .font(Theme.Typography.caption).foregroundStyle(Theme.Colors.accent)
+                        TextField("работа, название проекта, дизайн", text: $aiKeywords, axis: .vertical)
+                            .textFieldStyle(.roundedBorder).lineLimit(2...4)
+                        Text("Помогают Mono AI выбрать папку. Разделяйте запятыми. Хранятся на этом устройстве.")
+                            .font(Theme.Typography.caption).foregroundStyle(Theme.Colors.textMuted)
+                    }
                     if tagToEdit != nil {
                         Button("Удалить категорию", role: .destructive) { confirmingDelete = true }
                             .frame(minHeight: 44)
@@ -261,6 +271,7 @@ struct TagEditSheet: View {
 
                 selectedColorHex = Theme.Colors.normalizedTagHex(tag.colorHex)
                 selectedWeekdays = Set(tag.scheduledDays)
+                aiKeywords = MonoAIKeywordsStore.shared.customKeywords(for: tag.id).joined(separator: ", ")
             }
         }
     }
@@ -286,6 +297,7 @@ struct TagEditSheet: View {
             tag.iconName = selectedIcon
             tag.scheduledDays = orderedDays
             tag.touch()
+            MonoAIKeywordsStore.shared.set(MonoAIKeywords.normalize(aiKeywords), for: tag.id)
         } else {
             let newTag = Tag(
                 name: trimmedName,
@@ -296,6 +308,7 @@ struct TagEditSheet: View {
                 sortOrder: (tags.map(\.sortOrder).max() ?? -1) + 1
             )
             modelContext.insert(newTag)
+            MonoAIKeywordsStore.shared.set(MonoAIKeywords.normalize(aiKeywords), for: newTag.id)
         }
 
         modelContext.saveAndSync(delaySeconds: 0.3)

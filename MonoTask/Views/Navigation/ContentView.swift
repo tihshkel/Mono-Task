@@ -163,6 +163,10 @@ private struct FloatingTaskCapture: View {
     var body: some View {
         VStack(spacing: 9) {
             CaptureFolderPicker(tags: tags, choice: $folderChoice, newName: $newFolderName) { fieldFocused = true }
+            HStack {
+                MonoAIEntryButton(folderID: aiFolderID, text: title)
+                Spacer()
+            }
             HStack(spacing: 8) {
                 PriorityToggleButton(isOn: $highPriority, size: 36)
                 TextField("Новая задача", text: $title)
@@ -218,5 +222,9 @@ private struct FloatingTaskCapture: View {
         Haptics.light()
         title = ""
         highPriority = false
+    }
+
+    private var aiFolderID: UUID? {
+        if case .existing(let id) = folderChoice { id } else { nil }
     }
 }

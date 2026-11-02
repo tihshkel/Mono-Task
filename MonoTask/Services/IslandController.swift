@@ -345,6 +345,12 @@ final class IslandController {
         collapse()
     }
 
+    func openMonoAI() {
+        MonoAIRouter.shared.request = .init(fromIsland: true)
+        collapse()
+        openWorkspace?()
+    }
+
     @discardableResult
     func createTask(title: String) -> Bool {
         guard let task = container?.mainContext.createTask(title: title, tag: nil, highPriority: false) else {

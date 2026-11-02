@@ -1115,6 +1115,7 @@ struct WorkspaceCaptureSheet: View {
                 .modifier(CaptureContentEntrance(revealed: revealed, delay: 0.035))
             CaptureFolderPicker(tags: tags, choice: $folderChoice, newName: $newFolderName) { focused = true }
                 .modifier(CaptureContentEntrance(revealed: revealed, delay: 0.07))
+            MonoAIEntryButton(folderID: selectedAIContext, text: title, onOpen: close)
             HStack {
                 Text("Детали можно добавить позже").font(.system(size: 11)).foregroundStyle(Theme.Colors.textMuted)
                 Spacer()
@@ -1146,6 +1147,10 @@ struct WorkspaceCaptureSheet: View {
         {
             close()
         }
+    }
+
+    private var selectedAIContext: UUID? {
+        if case .existing(let id) = folderChoice { id } else { nil }
     }
 
     private func close() {

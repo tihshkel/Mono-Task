@@ -27,6 +27,12 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Сканировать QR-код приглашения, чтобы присоединиться к общей папке MonoTask.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Сказать задачу голосом в Mono AI. Запись начинается только по нажатию микрофона.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Преобразовать вашу речь в текст задачи с помощью офлайн-распознавания на устройстве.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
@@ -43,7 +49,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>NSCameraUsageDescription</key>
-	<string>Сканировать QR-код приглашения, чтобы присоединиться к общей папке MonoTask.</string>
 </dict>
 </plist>

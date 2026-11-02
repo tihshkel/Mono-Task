@@ -104,6 +104,12 @@ struct ScreenshotPreviewRoot: View {
             .onAppear {
                 AuthManager.shared.activeContainer = container
                 showingSyncDetails = ProcessInfo.processInfo.arguments.contains("--sync-details")
+                #if os(macOS)
+                if ProcessInfo.processInfo.arguments.contains("--mono-ai-preview")
+                    || Bundle.main.object(forInfoDictionaryKey: "MonoAIReviewMode") as? Bool == true {
+                    MonoAIRouter.shared.request = .init()
+                }
+                #endif
             }
             .task {
                 if ProcessInfo.processInfo.arguments.contains("--cancel-sync-request") {

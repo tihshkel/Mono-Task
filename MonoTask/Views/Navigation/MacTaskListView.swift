@@ -160,6 +160,7 @@ struct MacTaskListView: View {
                 TextField("Найти задачу в папке", text: $search).textFieldStyle(.plain).font(.system(size: 12))
                 Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundStyle(Theme.Colors.textMuted)
             }.padding(12).background(Theme.Colors.fill, in: RoundedRectangle(cornerRadius: 12))
+            if let tag = activeTag, isTagScope { FolderAIKeywordsView(tag: tag) }
             ProgressLine(progress: progress, height: 3)
         }
     }

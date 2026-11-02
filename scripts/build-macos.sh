@@ -21,6 +21,10 @@ application="$derived_data/Build/Products/Release/MonoTask.app"
 version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$application/Contents/Info.plist")"
 binary="$application/Contents/MacOS/MonoTask"
 lipo "$binary" -verify_arch arm64 x86_64
+if ! otool -l "$binary" | grep -F '@executable_path/../Frameworks' > /dev/null; then
+    printf 'Missing macOS embedded-framework runtime search path.\n' >&2
+    exit 1
+fi
 codesign --verify --deep --strict "$application"
 mkdir -p "$output_directory"
 archive="MonoTask-$version-macOS-universal.zip"

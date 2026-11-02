@@ -102,6 +102,10 @@ struct MacRootView: View {
             }
         }
         .modifier(MacTaskCapturePresentation(request: $taskCapture, tags: tags))
+        .modifier(MonoAIPresentation())
+        .onChange(of: MonoAIRouter.shared.request?.id) { _, id in
+            if id != nil { taskCapture = nil }
+        }
     }
 
     // MARK: - Sidebar

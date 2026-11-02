@@ -61,6 +61,8 @@ struct MonoTaskApp: App {
                 Button("Добавить задачу в островке") { IslandController.shared.beginCapture() }
                 .keyboardShortcut("n", modifiers: [.command, .option])
                 .disabled(!IslandController.shared.preferences.enabled)
+                Button("Добавить с Mono AI") { IslandController.shared.openMonoAI() }
+                    .keyboardShortcut("a", modifiers: [.command, .option])
             }
         }
         #endif
@@ -83,7 +85,8 @@ struct MonoTaskApp: App {
             OnboardingPreviewRoot()
         } else if ProcessInfo.processInfo.arguments.contains("--auth-preview") {
             AuthView()
-        } else if ProcessInfo.processInfo.arguments.contains("--screenshots") {
+        } else if ProcessInfo.processInfo.arguments.contains("--screenshots")
+            || Bundle.main.object(forInfoDictionaryKey: "MonoAIReviewMode") as? Bool == true {
             ScreenshotPreviewRoot()
         } else if ProcessInfo.processInfo.arguments.contains("--scroll-gesture-test") {
             ScrollGestureTestRoot()

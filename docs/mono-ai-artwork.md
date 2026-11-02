@@ -1,0 +1,5 @@
+# Mono AI visual
+
+Generated with the built-in image generation tool. Final asset: `MonoTask/Resources/Assets.xcassets/MonoAIEmblem.imageset/mono-ai-emblem.png`.
+
+Prompt: A production-ready transparent PNG visual for the Mono AI local task assistant in a premium native iPhone and Mac productivity app. A sculptural compact folded ribbon forming a subtle abstract lowercase m / infinite thought loop, three dimensional, soft rounded bevels, satin ceramic and smoked translucent glass. Strong recognizable silhouette at 64px. Restrained brand palette: dominant luminous chartreuse lime #D9FF00 paired with deep violet #6B57C8 and warm graphite #221F20, tiny warm orange edge accent only. Not a rainbow, not a generic glowing orb, no sparkle glyph, no brain, no robot, no face, no letters or words, no icon tile behind it. Elegant tactile editorial product render with studio rim lighting, precisely defined highlights and gentle internal depth. Centered on square transparent canvas, no floor or opaque background. Calm, tactile and readable on light cream and dark charcoal.

@@ -1,6 +1,68 @@
 import XCTest
 
 @MainActor
+final class MonoAISettingsTests: XCTestCase {
+    private func openSettings(appearance: String) -> XCUIApplication {
+        let app = XCUIApplication(bundleIdentifier: "com.monotask")
+        app.launchArguments = ["--screenshots", "--settings", "-monotask_appearance", appearance]
+        app.launch()
+        XCTAssertTrue(app.buttons["navigation-settings"].waitForExistence(timeout: 10))
+        app.scrollViews.firstMatch.swipeUp()
+        let ai = app.buttons["settings-page-sparkles"]
+        XCTAssertTrue(ai.waitForExistence(timeout: 5))
+        ai.tap()
+        XCTAssertTrue(app.switches["Озвучивать ответы"].waitForExistence(timeout: 5))
+        return app
+    }
+
+    func testCompactSettingsAndDownloadConfirmation() {
+        continueAfterFailure = false
+        let app = openSettings(appearance: "dark")
+        XCTAssertFalse(
+            app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Mono AI обрабатывает текст"))
+                .firstMatch.exists)
+        let download = app.buttons["mono-ai-download"]
+        XCTAssertTrue(download.exists)
+        let image = XCTAttachment(screenshot: app.screenshot())
+        image.name = "Mono AI settings dark"
+        image.lifetime = .keepAlways
+        add(image)
+        download.tap()
+        XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 5))
+        app.alerts.buttons["Отмена"].tap()
+        XCTAssertTrue(download.exists)
+        app.terminate()
+    }
+
+    func testLightSettingsScreenshot() {
+        let app = openSettings(appearance: "light")
+        let image = XCTAttachment(screenshot: app.screenshot())
+        image.name = "Mono AI settings light"
+        image.lifetime = .keepAlways
+        add(image)
+        app.terminate()
+    }
+
+    func testVoiceCustomizationIsAvailableWithoutPlayback() {
+        continueAfterFailure = false
+        let app = openSettings(appearance: "dark")
+        defer { app.terminate() }
+        let disclosure = app.buttons["Голос Mono AI"]
+        if !disclosure.isHittable { app.scrollViews.firstMatch.swipeUp() }
+        XCTAssertTrue(disclosure.waitForExistence(timeout: 5))
+        disclosure.tap()
+        app.scrollViews.firstMatch.swipeUp()
+        XCTAssertTrue(app.buttons["mono-ai-voice-preview"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.sliders["Темп речи Mono AI"].exists)
+        XCTAssertTrue(app.sliders["Высота голоса Mono AI"].exists)
+        let image = XCTAttachment(screenshot: app.screenshot())
+        image.name = "Mono AI voice settings"
+        image.lifetime = .keepAlways
+        add(image)
+    }
+}
+
+@MainActor
 final class OnboardingTests: XCTestCase {
     func testFourStepsBackNavigationAndAuthenticationHandoff() {
         continueAfterFailure = false

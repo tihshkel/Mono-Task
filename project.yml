@@ -13,6 +13,10 @@ settings:
     MACOSX_DEPLOYMENT_TARGET: "15.0"
 
 packages:
+  MonoVoice:
+    path: Vendor/MonoVoice
+  MonoInference:
+    path: Vendor/MonoInference
   Supabase:
     url: https://github.com/supabase/supabase-swift.git
     from: "2.0.0"
@@ -26,6 +30,10 @@ targets:
       iOS: "18.0"
       macOS: "15.0"
     dependencies:
+      - package: MonoVoice
+        product: MonoVoice
+      - package: MonoInference
+        product: MonoInference
       - package: Supabase
         product: Supabase
     sources:
@@ -38,6 +46,8 @@ targets:
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         NSCameraUsageDescription: "Сканировать QR-код приглашения, чтобы присоединиться к общей папке MonoTask."
+        NSMicrophoneUsageDescription: "Сказать задачу голосом в Mono AI. Запись начинается только по нажатию микрофона."
+        NSSpeechRecognitionUsageDescription: "Преобразовать вашу речь в текст задачи с помощью офлайн-распознавания на устройстве."
         CFBundleURLTypes:
           - CFBundleURLSchemes:
               - com.monotask.ios
@@ -57,7 +67,7 @@ targets:
         "PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]": com.monotask.ios
         "PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]": com.monotask.macos
         MARKETING_VERSION: "2.2.0"
-        CURRENT_PROJECT_VERSION: 24
+        CURRENT_PROJECT_VERSION: 28
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIconPalette
         "ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES[sdk=iphone*]": "AppIconLight AppIconDark AppIconLightPalette AppIconDarkPalette"
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
@@ -65,5 +75,7 @@ targets:
         ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
         ENABLE_PREVIEWS: YES
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 58XWFCNKP7
+        "LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]": "$(inherited) @executable_path/../Frameworks"
         GENERATE_INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES

@@ -363,6 +363,8 @@ struct IslandView: View {
             .accessibilityIdentifier("island-pin")
             iconButton("Настроить островок", symbol: "slider.horizontal.3", action: controller.showSettings)
                 .accessibilityIdentifier("island-settings")
+            iconButton("Добавить с Mono AI", symbol: "sparkles", action: controller.openMonoAI)
+                .accessibilityIdentifier("island-ai")
             iconButton("Добавить задачу", symbol: "plus", action: controller.beginCapture).accessibilityIdentifier(
                 "island-add")
             iconButton("Открыть MonoTask", symbol: "arrow.up.right", action: openWorkspace)
